@@ -1,0 +1,121 @@
+---
+title: "EDA RNA-seq time courses"
+author: "Santiago Medina"
+date: "1/10/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf")
+  )
+
+library(tidyverse)
+library(ggrepel)
+library(gridExtra)
+theme_set(theme_light())
+```
+
+In this notebook I will visualize the time-course RNA-seq data.
+
+```{r load_data}
+dpath <- "../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/"
+
+polyA_wt <- read_csv(str_c(dpath, "polyA-profile.csv"))
+ribo_wt <- read_csv(str_c(dpath, "ribo-zero-profile.csv"))
+polyA_alpha <- read_csv(str_c(dpath, "alpha-amanitin-prolife.csv"))
+errc <- read_csv(str_c(dpath, "ercc_count.csv"))
+```
+
+## PCA analysis
+
+```{r pca, fig.height=2.5, fig.width=9}
+
+visualize_pca_decomposition <- function(data, title = NULL) {
+  pca <- 
+    data %>% 
+    select(-Gene_ID, -Name) %>% 
+    .[rowMeans(.) > 10, ] %>% # low expressed genes are not usefull
+    mutate_all(~ log(. + 1)) %>%  # log transformation works good
+    t() %>% 
+    prcomp(scale. = T)
+  
+  # get % of explained var for the visualization
+  pca_var <- pca$sdev^2
+  pca_var_per <- round(pca_var / sum(pca_var) * 100, 1)
+  
+  ## make plot
+  as_tibble(pca$x, rownames = "sample_id") %>% 
+    mutate(
+      time = str_extract(sample_id, pattern = "\\d.?\\d?"),
+      time = str_remove(time, "h") %>% as.numeric()
+      ) %>% 
+    ggplot(aes(x = PC1, y = PC2, label = time, color = time)) +
+    geom_text_repel() +
+    geom_point() +
+    labs(
+      x = str_c("PC1, ", pca_var_per[1], "%"),
+      y = str_c("PC2, ", pca_var_per[2], "%"),
+      title = title
+    )
+  
+}
+
+p1 <- visualize_pca_decomposition(ribo_wt, title = "ribo wt")
+p2 <- visualize_pca_decomposition(polyA_wt, title = "polyA wt")
+p3 <- visualize_pca_decomposition(polyA_alpha, title = "polyA alpha")
+
+grid.arrange(p1, p2, p3, nrow = 1)
+```
+
+The PCA analysis looks find!
+
+## Bivariate distributions
+
+```{r  bivariate_polyA, fig.height=4, fig.width=10}
+tidy_data <- function(data, var_id) {
+  data %>% 
+    select(-Name) %>% 
+    gather(key = sample_id, value = TPM, -Gene_ID) %>% 
+    mutate(
+      time = as.numeric (str_extract(sample_id, "\\d{1}\\.?\\d?")),
+      condition = var_id
+    )
+}
+
+dtidy <- bind_rows(
+  tidy_data(polyA_wt, "polyA_wt"),
+  tidy_data(polyA_alpha, "polyA_aamanitin"),
+  tidy_data(ribo_wt, "ribo_wt")
+)
+
+p1 <- dtidy %>% 
+  filter(condition != "polyA_aamanitin") %>% 
+  filter(time %% 1 == 0) %>% 
+  spread(key = condition, value = TPM) %>% 
+  ggplot(aes(x = polyA_wt, y = ribo_wt)) +
+  geom_hex() +
+  facet_grid(~time) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme(axis.text.x = element_blank()) +
+  scale_fill_viridis_c()
+
+p2 <- dtidy %>% 
+  filter(condition != "ribo_wt") %>% 
+  select(-sample_id) %>% 
+  filter(time %% 1 == 0) %>% 
+  spread(key = condition, value = TPM) %>% 
+  drop_na() %>% 
+  ggplot(aes(x = polyA_wt, y = polyA_aamanitin)) +
+  geom_hex() +
+  facet_grid(~time) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme(axis.text.x = element_blank()) +
+  scale_fill_viridis_c()
+
+grid.arrange(p1, p2, nrow = 2)
+```
+
