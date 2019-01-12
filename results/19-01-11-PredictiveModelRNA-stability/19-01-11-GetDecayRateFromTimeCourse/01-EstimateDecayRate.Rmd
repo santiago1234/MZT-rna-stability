@@ -1,0 +1,114 @@
+---
+title: "Decay Rate Estimation"
+author: "Santiago Medina"
+date: "1/11/2019"
+output: github_document
+---
+
+### Overview:
+
+The goal of this analysis is to estimate the decay rate for the endogenous genes with the a-amanitin data.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300
+  )
+
+# libraries need it for analysis
+library(tidyverse)
+library(zFPKM)
+
+theme_set(theme_light())
+```
+
+### 1. Tidy data for analysis
+
+I use the a-amanitin data set. This includes 12 time points.
+
+```{r data}
+amanitin <- read_csv("../../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/alpha-amanitin-prolife.csv")
+
+# reshape data in more usefull format
+time_course <- 
+  amanitin %>% 
+  select(-Name) %>% 
+  gather(key = sample, value = TPM, -Gene_ID) %>% 
+  mutate(
+    time = str_extract(sample, pattern = "\\d\\.?\\d?") %>% as.numeric()
+  ) %>% 
+  select(-sample)
+
+```
+
+### 2. Detect active genes
+
+To estimate the decay rate I will use only active genes. I will use the 
+[zFPKM](https://bioconductor.org/packages/release/bioc/html/zFPKM.html) package for this.
+
+Plot of the distribution of gene expression.
+
+```{r expression_distribution}
+time_course %>% 
+  ggplot(aes(x = TPM, color = time, group = time)) +
+  geom_density() +
+  scale_x_log10() +
+  scale_color_viridis_c()
+```
+
+as the authors suggest a cut-off of zFPKM > -3 is used.
+
+
+```{r active_genes}
+zfpkm <- 
+  amanitin %>% 
+  select(-Name, -Gene_ID) %>% 
+  as.data.frame() %>% 
+  zFPKM(assayName = "tpm")
+
+active_genes <- 
+  amanitin[rowMeans(zfpkm) > -3, ] %>% 
+  pull(Gene_ID)
+
+time_course <- filter(time_course, Gene_ID %in% active_genes)
+
+time_course %>% 
+  ggplot(aes(x = TPM, color = time, group = time)) +
+  geom_density() +
+  scale_x_log10() +
+  scale_color_viridis_c()
+```
+
+### 3. Estimate Decay Rate
+
+Can you go full Bayes?
+
+```{r}
+## 
+set.seed(123)
+s_genes <- time_course$Gene_ID %>% 
+  sample(12)
+
+time_course %>% 
+  filter(Gene_ID %in% s_genes) %>% 
+  ggplot(aes(x = time, y = TPM)) +
+  geom_point() +
+  facet_wrap(~Gene_ID, scales = "free") +
+  scale_y_log10() + 
+  geom_smooth(method = lm) +
+  labs(
+    title = "RNA-seq time course",
+    subtitle = "A group of random genes is displayed",
+    x = "time (hrs)"
+    )
+```
+
+
+***
+### Session Info
+
+```{r session}
+sessionInfo()
+```
+

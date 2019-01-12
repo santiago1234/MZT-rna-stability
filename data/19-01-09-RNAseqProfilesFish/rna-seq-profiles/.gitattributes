@@ -1,0 +1,4 @@
+alpha-amanitin-prolife.csv filter=lfs diff=lfs merge=lfs -text
+ercc_count.csv filter=lfs diff=lfs merge=lfs -text
+polyA-profile.csv filter=lfs diff=lfs merge=lfs -text
+ribo-zero-profile.csv filter=lfs diff=lfs merge=lfs -text

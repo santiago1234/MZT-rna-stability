@@ -33,8 +33,5 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
-# Other files in this project
-data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/
-
 # ignore pdf figures
 *.pdf
