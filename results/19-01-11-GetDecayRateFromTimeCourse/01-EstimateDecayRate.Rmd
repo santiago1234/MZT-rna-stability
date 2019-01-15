@@ -2,7 +2,9 @@
 title: "Decay Rate Estimation"
 author: "Santiago Medina"
 date: "1/11/2019"
-output: github_document
+output:
+   html_document:
+    keep_md: true
 ---
 
 ### Overview:
@@ -19,6 +21,8 @@ knitr::opts_chunk$set(
 # libraries need it for analysis
 library(tidyverse)
 library(zFPKM)
+library(broom)
+library(brms)
 
 theme_set(theme_light())
 ```
@@ -28,7 +32,7 @@ theme_set(theme_light())
 I use the a-amanitin data set. This includes 12 time points.
 
 ```{r data}
-amanitin <- read_csv("../../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/alpha-amanitin-prolife.csv")
+amanitin <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/alpha-amanitin-prolife.csv")
 
 # reshape data in more usefull format
 time_course <- 
@@ -77,12 +81,19 @@ time_course %>%
   ggplot(aes(x = TPM, color = time, group = time)) +
   geom_density() +
   scale_x_log10() +
-  scale_color_viridis_c()
+  scale_color_viridis_c() +
+  labs(
+    titlte = "TPM Distribuiton for active genes"
+  )
+
+## save a copy of the active and tidy genes (time_cours)
+
+write_csv(time_course, "results_data/aamanitin_time_course_tidy_only_active_genes.csv")
 ```
 
 ### 3. Estimate Decay Rate
 
-Can you go full Bayes?
+Now, I display the time course for a set of random genes.
 
 ```{r}
 ## 
@@ -103,6 +114,63 @@ time_course %>%
     x = "time (hrs)"
     )
 ```
+
+#### Model
+
+To estimate the decay rate I will use the following linear model
+
+$$
+\begin{aligned}
+logTPM &\sim Normal(\mu_i, \sigma) \\
+\mu_i & = \alpha + \beta\;time
+\end{aligned}
+$$
+Note: I subtract -2 from the time variable, so the $\alpha$ parameter has the interpretation of the RNA-level at time 2 hrs.
+
+
+```{r get_estimates}
+
+fit_unpooled <- 
+  time_course %>% 
+  group_by(Gene_ID) %>% 
+  mutate(time = time - min(time)) %>% # subtract time so it starts at 0
+  nest() %>% 
+  mutate(
+    fit = map(data, ~lm(log(TPM) ~ time, data = .)),
+    tidy_fit = map(fit, tidy, conf.int = T),
+    r2_score = map(fit, glance)
+  )
+
+# save results
+
+fit_unpooled %>% 
+  unnest(tidy_fit) %>% 
+  mutate(
+    term = str_replace(term, pattern = "\\(Intercept\\)", "alpha"),
+    term = str_replace(term, pattern = "time", "beta"),
+  ) %>% 
+  write_csv("results_data/estimated_decay_rates.csv")
+  
+
+x1 <- fit_unpooled %>% 
+  unnest(tidy_fit) %>% 
+  select(Gene_ID:estimate) %>% 
+  spread(key = term, value = estimate)
+
+x1 %>% 
+  ggplot(aes(x=`(Intercept)`, y=time)) +
+  geom_point(size = 1/4) +
+  geom_smooth() +
+  labs(
+    x = "alpha (log Expression at initial time point)",
+    y = "beta (decay rate)",
+    title = "bi-variate distribution of model parameters"
+  ) +
+  geom_vline(xintercept = 0, linetype=3, color = "red")
+
+```
+
+Note that to the left 0 (expression) the genes tend to have a positive $\beta$, this maybe just noise.
 
 
 ***

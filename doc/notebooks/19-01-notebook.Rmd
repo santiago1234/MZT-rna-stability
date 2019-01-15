@@ -29,3 +29,19 @@ I also generated the following bi-variate distribution: ![](../../results/19-01-
 - For the alpha-amanitin-time course I have to see what is the best way to perform the SPIKE-in normalization, I can
   ask Ariel or Comp-Bio. Also the following paper by [Risso](https://www.nature.com/articles/nbt.2931) can be useful to read.
 
+***
+### 19-01-15 
+
+#### Estimating decay rate a-amanitin data
+
+Today I focus on getting the decay rate estimates. The following are things to keep in mind:
+
+1. filter the noise (low expressed genes could be just noise)
+2. I am not using the SPIKE-IN normalization, so I am getting a decay rate in step of half-life.
+3. I can do pooling with a hierarchical model to account for noise. I will give a try.
+
+To account for the noise I filter out low expressed genes, and this was done with the ZFPKM package to detect the active genes. The following plot shows the distribution of the genes after filtering. ![](../../results/19-01-11-GetDecayRateFromTimeCourse/figures/active_genes-1.png)
+
+I fitted a log-linear model to the TPM to get the estimates. The followuing plot shows the bi-variate distribution of the model parameters. ![](../../results/19-01-11-GetDecayRateFromTimeCourse/figures/get_estimates-1.png)
+
+Note that at low expression the beta estimates tend to be more positve, this can be do to noise, consider filtering genes with alpha > 0.
