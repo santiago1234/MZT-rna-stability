@@ -2,7 +2,9 @@
 title: "Notebook"
 author: "Santiago Medina"
 date: "1/9/2019"
-output: github_document
+output:
+   html_document:
+    keep_md: true
 ---
 
 In this notebook I record my daily progress in detail. This notebook should record
@@ -22,7 +24,7 @@ I have to re-run previews analysis and do some quality checks on this data. Arie
 
 + Run Exploratory analysis for RNA-seq time course (PCA), the PCA analysis looks find.
 
-I also generated the following bi-variate distribution: ![](19-01-10-EDA-RNA-time-course/figures/bivariate_polyA-1.png)
+I also generated the following bi-variate distribution: ![](../../results/19-01-10-EDA-RNA-time-course/figures/bivariate_polyA-1.png)
 
 - For the alpha-amanitin-time course I have to see what is the best way to perform the SPIKE-in normalization, I can
   ask Ariel or Comp-Bio. Also the following paper by [Risso](https://www.nature.com/articles/nbt.2931) can be useful to read.
