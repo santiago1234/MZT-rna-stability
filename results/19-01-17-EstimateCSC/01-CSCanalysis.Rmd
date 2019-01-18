@@ -1,0 +1,137 @@
+---
+title: "Compute CSC"
+author: "Santiago Medina"
+date: "1/17/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+## CSC analysis
+
+Here, I estimate the CSC as defined in [Prensyak et al 2016](https://www.cell.com/cell/fulltext/S0092-8674(15)00195-6) for the a-amanitin time course.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+# libraries need it for analysis
+library(tidyverse)
+library(broom)
+
+theme_set(theme_bw())
+```
+
+
+I filter the data $\alpha > 0$, bassically drop low expressed genes.
+
+```{r load_data}
+decay <- read_csv("../19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv")
+
+decay_rate <- decay %>% 
+  select(Gene_ID:estimate) %>% 
+  spread(key = term, value = estimate) %>% 
+  filter(alpha > 0)
+
+codon_composition <- read_csv("../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/zfish_codon_composition.csv")
+
+# normalize so rows add up to 1
+
+codon_probas <- 
+  codon_composition %>% 
+  gather(key = codon, value = freq, -id_col) %>% 
+  group_by(id_col) %>% 
+  mutate(p = freq / sum(freq)) %>% 
+  ungroup() %>% 
+  select(-freq) %>% 
+  spread(key = codon, value = p) %>% 
+  rename(Gene_ID = id_col)
+```
+
+
+### Data Exploration
+
+```{r vis}
+data <- 
+  decay_rate %>% 
+  select(-alpha) %>% 
+  inner_join(codon_probas)
+
+ggplot(data, aes(beta)) +
+  geom_histogram(bins = 100) +
+  labs(
+    title = "Decay Rate Distribution"
+  )
+```
+
+There is an unpublished a-amanitin data set from Ariel's previous lab. I will load this data and see if they correlate.
+
+
+```{r cor_with_old_data}
+old_hl <- read_tsv("../../data/19-01-17-EMBO2016DATA/datasets/Half_life_Zebrafish.txt")
+
+old_hl %>% 
+  rename(Gene_ID = gene) %>% 
+  inner_join(data) %>% 
+  ggplot(aes(-log(2) / HL, beta)) +
+  geom_point(shape = ".") +
+  ggpubr::stat_cor() +
+  geom_smooth(method = "lm", size = 1/2) +
+  labs(
+    x = "Decay Rate (old data set, unpublished)",
+    y = "My decay rate (new data)",
+    title = "Do we get similar estimates for mRNA stability?"
+    )
+```
+
+GOOD!, the correlation is not bad.
+
+## Estimate CSC values
+
+```{r csc}
+csc <- 
+  data %>% 
+  gather(key = codon, value = proba, -beta, -Gene_ID) %>% 
+  select(-Gene_ID) %>% 
+  group_by(codon) %>% 
+  nest() %>% 
+  mutate(
+    cor = map(data, ~cor.test(.$beta, .$proba)),
+    tidy_cor = map(cor, ~tidy(.))
+  ) %>% 
+  unnest(tidy_cor) %>% 
+  select(codon, estimate:conf.high)
+
+csc %>% 
+  ggplot(aes(x=reorder(codon, -estimate), y=estimate)) +
+  geom_point(size = 1/2) +
+  geom_hline(yintercept = 0, linetype= 3) +
+  geom_linerange(aes(ymin=conf.low, ymax=conf.high)) +
+  theme(axis.text.x = element_text(angle = 90, size = 4)) +
+  labs(
+    y = "CSC",
+    x = NULL
+  )
+```
+
+#### Do these estimates correlate with the EMBO 2016 paper estimates?
+
+
+```{r csc_cors}
+read_tsv("../../data/19-01-17-EMBO2016DATA/datasets/Decay_HF_vs_Arielome.txt") %>% 
+  rename(codon = Codon) %>% 
+  inner_join(csc) %>% 
+  ggplot(aes(InVivo_Zebrafish, estimate)) +
+  geom_point() +
+  ggpubr::stat_cor() +
+  geom_smooth(method = "lm") +
+  labs(
+    x = "CSC EMBO 2016",
+    y = "new data CSC"
+  )
+```
+

@@ -45,3 +45,27 @@ To account for the noise I filter out low expressed genes, and this was done wit
 I fitted a log-linear model to the TPM to get the estimates. The followuing plot shows the bi-variate distribution of the model parameters. ![](../../results/19-01-11-GetDecayRateFromTimeCourse/figures/get_estimates-1.png)
 
 Note that at low expression the beta estimates tend to be more positve, this can be do to noise, consider filtering genes with alpha > 0.
+
+***
+### 19-01-17
+
+#### Download ORFs and 3' UTR seqs from with biomartR
+
++ I downloaded the coding and 3' utr sequences for fish, I generated a table with the codon composition.
+  The data is in: *data/19-01-17-Get-ORFS-UTRS-codon-composition*
+
+
+#### Compute CSC
+
+Compute the CSC, this is a way to see if our a-amanitin experiments and
+half-life estimation works. It should correlate with the CSC of EMBO 2016.
+
+The following plot displays the distribution of the decay rates ![](../../results/19-01-17-EstimateCSC/figures/vis-1.png)
+
+This decay rate estimates show a correlation with the old a-amanitin data set.
+![](../../results/19-01-17-EstimateCSC/figures/cor_with_old_data-1.png)
+
+So we expect to see a correlation with the CSC estimates of the previous unpublished a-amanitin data set.
+
+![](../../results/19-01-17-EstimateCSC/figures/csc_cors-1.png)
+

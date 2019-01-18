@@ -41,3 +41,6 @@ vignettes/*.pdf
 
 # ignore .csv files
 *.csv
+
+# IGNORE THE FOLLOWING DATA SETS
+data/19-01-17-EMBO2016DATA/datasets/*
