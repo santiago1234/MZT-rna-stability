@@ -1,0 +1,119 @@
+---
+title: "PLS analysis"
+author: "Santiago Medina"
+date: "1/18/2019"
+output: html_document
+---
+
+
+## Overview
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+# libraries need it for analysis
+library(tidyverse)
+library(recipes)
+
+theme_set(theme_bw())
+
+decay <- codonr::load_decay_aa_codon_composition_data(
+  cc_dp = "../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/zfish_codon_composition.csv",
+  decay_dp = "../19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv"
+)
+```
+
+```{r pls}
+
+feature_extractor <-
+  recipe(decay_rate ~ ., data = decay)  %>%
+  update_role(Gene_ID, new_role = "id variable") %>%
+  step_spatialsign(all_predictors()) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors()) %>%
+  step_pls(all_predictors(), outcome = "decay_rate") %>%
+  prep(retain = T)
+
+pls_components <- juice(feature_extractor)
+
+```
+
+cool! We have the estimates let's visualized and see how they correlate with the outcome.
+
+
+```{r pls_cor_decay}
+pls_components %>% 
+  gather(key = component, value = value, -decay_rate, -Gene_ID) %>% 
+  ggplot(aes(x = value, y = decay_rate)) +
+  geom_point(shape=".") +
+  facet_grid(~component) +
+  labs(
+    y = "Decay Rate"
+  )
+```
+
+### Do these estimate affect wt mRNA level
+
+```{r pls_expression, fig.height=3, fig.width=9}
+# load data sets
+
+ribo <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/ribo-zero-profile.csv")
+poly <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/polyA-profile.csv")
+
+
+tidy_expression <- function(exprdf) {
+  exprdf %>% 
+    select(-Name) %>% 
+    gather(key = "s", value = TPM, -Gene_ID) %>% 
+    mutate(
+      s = str_replace(string = s, "s_wt_", "")
+    ) %>% 
+    separate(s, into = c("time", "nothing"), sep = "h") %>% 
+    select(-nothing) %>% 
+    mutate(time = as.numeric(time))
+}
+
+
+expression <- 
+  bind_rows(
+  mutate(tidy_expression(poly), protocol = "poly-A"),
+  mutate(tidy_expression(ribo), protocol = "ribo0")
+)
+
+pls_components %>% 
+  inner_join(expression) %>% 
+  ggplot(aes(x=PLS1, y=TPM)) +
+  geom_hex() +
+  ggpubr::stat_cor(size = 1.5) +
+  scale_y_log10() +
+  scale_fill_viridis_c() +
+  facet_grid(protocol ~ time) +
+  labs(
+    subtitle = "Effect of Codons in mRNA level",
+    title = "PLS1"
+  )
+
+
+pls_components %>% 
+  inner_join(expression) %>% 
+  ggplot(aes(x=PLS2, y=TPM)) +
+  geom_hex() +
+  ggpubr::stat_cor(size = 1.5) +
+  scale_y_log10() +
+  scale_fill_viridis_c() +
+  facet_grid(protocol ~ time) +
+  labs(
+    subtitle = "Effect of Codons in mRNA level",
+    title = "PLS2"
+  )
+
+```
+
+Doing the plot onyl with purly maternal genes may give better correlations.
+
+**Conclusion** The effect of codon optimality is significant at every time point.

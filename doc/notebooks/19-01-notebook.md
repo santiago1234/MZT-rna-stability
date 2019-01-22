@@ -69,3 +69,27 @@ So we expect to see a correlation with the CSC estimates of the previous unpubli
 
 ![](../../results/19-01-17-EstimateCSC/figures/csc_cors-1.png)
 
+***
+### 19-01-18
+
++ I created a project specific module to the [codonr package](https://github.com/santiago1234/codonr/blob/master/R/project_mzt_utils.R).
++ I put a function to load the codon composition and the decay rate.
+
+#### Supervised Dimensional Reduction of the Codon Space
+
+I aplied the PLS analysis to the codon space supervised with the decay rate, these PLS component can be used as a fancier version of codon optimality, usefull when doing the model comparison between m6A or miR430 pathways.
+
+![](../../results/19-01-18-ObtainEstimateOfCodonOptimalityPLS/figures/pls_cor_decay-1.png)
+
+Here, I also showd that codon optimality affects mRNA level.
+
+![](../../results/19-01-18-ObtainEstimateOfCodonOptimalityPLS/figures/pls_expression-1.png)
+
+This analysis will be useful later.
+
+***
+### 19-01-22
+
+### Predictive model of mRNA stability with the codon composition
+
+I start with some linear model to predict decay rate with the codon composition
