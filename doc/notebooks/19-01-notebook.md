@@ -92,4 +92,10 @@ This analysis will be useful later.
 
 ### Predictive model of mRNA stability with the codon composition
 
-I start with some linear model to predict decay rate with the codon composition
+I  evaluated linear models (linear regression, PLS, ridge, lasso), these model perform almost equally between them (20% explained variance). From these PLS is the most useful since with 3 variables we capture the variation in the codon space while explaining the decay rate. This analysis will be useful later.
+
+Next I show a Tufte boxplot with the results:
+
+![](../../results/19-01-22-PredictiveModelMrnaStability/figures/linear_results_linear_models-1.png)
+
+
