@@ -58,114 +58,114 @@ mdl_saver <- function(mdl_object, mdl_name) {
 
 # linear models -----------------------------------------------------------
 
-# set.seed(669)
-# linearregModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "lm",
-#   trControl = controlObject
-# )
-# mdl_saver(linearregModel, "linearregModel")
-# 
-# 
-# set.seed(669)
-# plsModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "pls",
-#   tuneLength = 15,
-#   trControl = controlObject
-# )
-# mdl_saver(plsModel, "plsModel")
-# 
-# 
-# enetGrid <- expand.grid(
-#   .lambda = c(0, .001, .01, .1),
-#   .fraction = seq(0.05, 1, length.out = 20)
-# )
-# set.seed(669)
-# enetModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "enet",
-#   tuneGrid = enetGrid,
-#   trControl = controlObject
-# )
-# mdl_saver(enetModel, "enetModel")
+set.seed(669)
+linearregModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "lm",
+  trControl = controlObject
+)
+mdl_saver(linearregModel, "linearregModel")
+
+
+set.seed(669)
+plsModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "pls",
+  tuneLength = 15,
+  trControl = controlObject
+)
+mdl_saver(plsModel, "plsModel")
+
+
+enetGrid <- expand.grid(
+  .lambda = c(0, .001, .01, .1),
+  .fraction = seq(0.05, 1, length.out = 20)
+)
+set.seed(669)
+enetModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "enet",
+  tuneGrid = enetGrid,
+  trControl = controlObject
+)
+mdl_saver(enetModel, "enetModel")
 
 # mars, nns, svms ---------------------------------------------------------
 
-# set.seed(669)
-# marsModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "earth",
-#   tuneGrid = expand.grid(.degree = c(1, 2), .nprune = 2:25),
-#   trControl = controlObject
-# )
-# mdl_saver(marsModel, "marsModel")
+set.seed(669)
+marsModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "earth",
+  tuneGrid = expand.grid(.degree = c(1, 2), .nprune = 2:25),
+  trControl = controlObject
+)
+mdl_saver(marsModel, "marsModel")
 
-# set.seed(669)
-# svmRModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "svmRadial",
-#   tuneLength = 15,
-#   trControl = controlObject
-# )
-# mdl_saver(svmRModel, "svmRModel")
+set.seed(669)
+svmRModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "svmRadial",
+  tuneLength = 15,
+  trControl = controlObject
+)
+mdl_saver(svmRModel, "svmRModel")
 
 
-# nnetGrid <- expand.grid(
-#   .decay = c(0.001, 0.01, 0.1),
-#   .size = seq(1, 27, by = 2),
-#   .bag = FALSE
-# )
-# set.seed(669)
-# nnetModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "avNNet",
-#   tuneGrid = nnetGrid,
-#   linout = TRUE,
-#   trace = FALSE,
-#   maxit = 1000,
-#   trControl = controlObject
-# )
-# mdl_saver(nnetModel, "nnetModel")
+nnetGrid <- expand.grid(
+  .decay = c(0.001, 0.01, 0.1),
+  .size = seq(1, 27, by = 2),
+  .bag = FALSE
+)
+set.seed(669)
+nnetModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "avNNet",
+  tuneGrid = nnetGrid,
+  linout = TRUE,
+  trace = FALSE,
+  maxit = 1000,
+  trControl = controlObject
+)
+mdl_saver(nnetModel, "nnetModel")
 
 # regression and model trees ----------------------------------------------
 
-# set.seed(669)
-# rpartModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "rpart",
-#   tuneLength = 10,
-#   trControl = controlObject
-# )
-# mdl_saver(rpartModel, "rpartModel")
-# 
-# 
-# set.seed(669)
-# ctreeModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "ctree",
-#   tuneLength = 10,
-#   trControl =controlObject
-# )
-# mdl_saver(ctreeModel, "ctreeModel")
-# 
-# 
-# set.seed(669)
-# mtModel <- train(
-#   codon_recipe,
-#   data = train_data,
-#   method = "M5",
-#   trControl = controlObject
-# )
-# mdl_saver(mtModel, "mtModel")
+set.seed(669)
+rpartModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "rpart",
+  tuneLength = 10,
+  trControl = controlObject
+)
+mdl_saver(rpartModel, "rpartModel")
+
+
+set.seed(669)
+ctreeModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "ctree",
+  tuneLength = 10,
+  trControl =controlObject
+)
+mdl_saver(ctreeModel, "ctreeModel")
+
+
+set.seed(669)
+mtModel <- train(
+  codon_recipe,
+  data = train_data,
+  method = "M5",
+  trControl = controlObject
+)
+mdl_saver(mtModel, "mtModel")
 
 # bagged, random forest, ensembls -----------------------------------------
 
