@@ -6,7 +6,7 @@ library(doParallel)
 
 # set parallel processing -------------------------------------------------
 
-cl <- makePSOCKcluster(27)
+cl <- makePSOCKcluster(20)
 registerDoParallel(cl)
 
 # load training data ------------------------------------------------------
@@ -148,17 +148,6 @@ mdl_saver(rpartModel, "rpartModel")
 
 
 set.seed(669)
-ctreeModel <- train(
-  codon_recipe,
-  data = train_data,
-  method = "ctree",
-  tuneLength = 10,
-  trControl =controlObject
-)
-mdl_saver(ctreeModel, "ctreeModel")
-
-
-set.seed(669)
 mtModel <- train(
   codon_recipe,
   data = train_data,
@@ -195,7 +184,8 @@ mdl_saver(rfModel, "rfModel")
 gbmGrid <- expand.grid(
   .interaction.depth = seq(1, 7, by = 2),
   .n.trees = seq(100, 1000, by = 50),
-  .shrinkage = c(0.01, 0.1)
+  .shrinkage = c(0.01, 0.1),
+  .n.minobsinnode = c(5, 10, 15, 20)
 )
 set.seed(669)
 gbmModel <- train(
@@ -210,8 +200,8 @@ mdl_saver(gbmModel, "gbmModel")
 
 
 cubistGrid <- expand.grid(
-  .comittees = c(1, 5, 10, 50, 75, 100),
-  .neighbors = c(0, 1, 3, 5, 7, 9)
+  committees = c(1, 5, 10, 50, 75, 100),
+  neighbors = c(0, 1, 3, 5, 7, 9)
 )
 cbModel <- train(
   codon_recipe,

@@ -1,0 +1,159 @@
+---
+title: "Summary of Decay Models"
+author: "Santiago Medina"
+date: "1/30/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(recipes)
+library(caret)
+library(ggthemes)
+theme_set(theme_light())
+```
+
+Here, I will look at the results of the predictive models that were trained. 
+**How do the models compare for these data and which one should be selected for the final model?**
+
+```{r load_models}
+load_mdl <- function(mdl_name) {
+  list.files("results_data/trained_models", pattern = mdl_name, full.names = T) %>% 
+    readRDS()
+}
+
+
+mdl_names <- 
+  list.files("results_data/trained_models/") %>% 
+  str_replace("Model.rds", "")
+
+mdl_list <- 
+  map(mdl_names, load_mdl) %>% 
+  set_names(mdl_names)
+
+all_resamples <- resamples(mdl_list)
+
+## test data
+test_data <- read_csv("results_data/test_data.csv")
+```
+
+```{r results, fig.width=4, fig.height=5}
+resamples_r2 <- 
+  all_resamples$values %>%
+  as_tibble() %>% 
+  gather(key = mdl, value = value, -Resample) %>% 
+  separate(mdl, into = c("mdl_name", "metric"), sep = "~")
+
+results <- 
+  resamples_r2 %>% 
+  filter(metric == "Rsquared") %>% 
+  group_by(mdl_name) %>% 
+  summarise(performance = median(value)) %>% 
+  arrange(performance)
+
+
+resamples_r2$mdl_name <- factor(resamples_r2$mdl_name, levels = results$mdl_name)
+
+knitr::kable(results)
+
+resamples_r2 %>% 
+  filter(metric == "Rsquared") %>% 
+  ggplot(aes(y = value, x = mdl_name)) +
+  geom_point(position = "jitter", color = "grey", size = 1/2) +
+  geom_tufteboxplot() +
+  geom_hline(yintercept = max(results$performance), linetype = 2, color = "steelblue") +
+  coord_flip() +
+  labs(
+    y = "R-squared",
+    x = NULL,
+    title = "Decay Models, resample profiles",
+    subtitle = "repeated 10-Cross Fold validation "
+  )
+```
+
+
+### What about the test set?
+
+I will plot the predictions in the test set
+
+```{r}
+# I my need to load libraries to run this
+library(gbm)
+library(randomForest)
+library(Cubist)
+
+make_preds_test <- function(mdl) {
+  tibble(y_pred = predict(mdl, test_data), y_true = test_data$decay_rate)
+}
+
+metric_test <- function(preds) {
+  res <- postResample(preds, test_data$decay_rate)
+  tibble(values = res, metric = names(res))
+}
+
+test_set_results <- tibble(
+  mdl_name = names(mdl_list),
+  mdl = mdl_list 
+) %>% 
+  filter(mdl_name != "mt") %>% 
+  mutate(
+    prediction = map(mdl, make_preds_test),
+    test_set_metric = map(prediction, function(x) pull(x, y_pred) %>% metric_test)
+  )
+
+test_set_results %>% 
+  unnest(test_set_metric) %>% 
+  filter(metric == "Rsquared") %>% 
+  inner_join(results) %>% 
+  rename(`Test Set` = values, `Cross-Validation` = performance) %>% 
+  mutate(mdl_name = factor(mdl_name, levels = results$mdl_name)) %>% 
+  select(-metric) %>% 
+  gather(key = set, value = Rsquared, -mdl_name) %>% 
+  ggplot(aes(x = Rsquared, y = mdl_name, color = set, shape = set)) +
+  geom_point() +
+  scale_color_manual(values = c("orange", "forestgreen"))
+
+```
+
+
+Here, the top performing models.
+
+```{r top_models}
+trellis.par.set(caretTheme())
+list(
+  "svmR" = mdl_list$svmR,
+  "gbm" = mdl_list$gbm,
+  "rf" = mdl_list$rf,
+  "nnet" = mdl_list$nnet
+) %>% 
+  resamples() %>% 
+  dotplot(resamps, metric = "Rsquared")
+```
+
+
+In summary the best performing model in the Suport Vector Machine. This model explain ~1/4 of the data variablity.
+
+```{r test_preds, fig.height=10, fig.width=5}
+test_set_results %>% 
+  mutate(mdl_name = factor(mdl_name, levels = results$mdl_name)) %>% 
+  unnest(prediction) %>% 
+  mutate(residuals = y_true - y_pred) %>% 
+  gather(key = metric, value = val, -mdl_name, -y_pred) %>% 
+  ggplot(aes(y_pred, val)) +
+  #geom_point(shape = ".") +
+  geom_hex() +
+  scale_fill_viridis_c() +
+  facet_grid(mdl_name~metric, scales = "free_y") +
+  labs(x = "predicted value", title = "Test Set Predictions")
+```
+

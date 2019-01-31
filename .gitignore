@@ -44,3 +44,7 @@ vignettes/*.pdf
 
 # IGNORE THE FOLLOWING DATA SETS
 data/19-01-17-EMBO2016DATA/datasets/*
+.Rproj.user
+
+# ignore results and data directories
+*/results_data/*
