@@ -15,3 +15,10 @@ for this experiment there is also an spikein count.
 NOTE: for these data-sets I downloaded the RSEM tpm tables.
 
 The script *get_files.sh* will download this data and generate a folder.
+
+I have saved a tidy version of the time course in the following path: *../data/19-02-05-FoldChangeData/data/RNAseq_tidytimecourse.csv*. I created a symbolic link to the file:
+
+```bash
+cd rna-seq-profiles/
+ln -s ../../19-02-05-FoldChangeData/data/RNAseq_tidytimecourse.csv RNAseq_tidytimecourse.csv
+```

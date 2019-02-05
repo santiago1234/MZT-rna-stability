@@ -1,0 +1,44 @@
+# February
+
+
+```{r settings, echo=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+## Building A predictive model of mRNA stability with 3' UTR
+
+### 19-02-01
+
+My goal of the following analysis is to answer the following questions:
+
++ How well do the 3' UTR sequences (concerning 6-mers) predict mRNA stability?
++ Do they predict better than the codons?
++ What about 3'UTR and codons together?
++ Can we identify regulatory k-mers that drive mRNA stability in the a-amanitin data?
++ Do these sequences affect expression level (genes with the element are more or less expressed)?
+
+To do this i will built the following predictive models
+
++ UTR model
++ UTR and codons model
+
+Then I will do feature importance analysis to identify potentially regulatory k-mer sequences.
+
+
+I generated a file with the 6-mer composition *data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/zfish_3utr6mer_composition.csv*.
+
+**I DID NOT FINISH THIS ANALYSIS**
+
+## Profiles of regulatory sequences in RNA-seq time course
+
+The goal is to evaluate the effect of regulatory elements (k-mers, MiR-430, etc.) in the RNA-seq profiles. Ariel suggested to do cumulative plots and also to show the elements that were previously detected.
+
+### 19-02-05
+
+I generated a tidy version of the data with the log2FCs and also a tidy version of the time course (*../../data/19-02-05-FoldChangeData/*). 
+
+Below is a plot of log2FC for some genes, the log2FC was computed with respect to the earliest time point in the time course.
+
+```{r log2FC, out.width='130%', fig.cap='log2 time point / earliest time point'}
+knitr::include_graphics("../../data/19-02-05-FoldChangeData/figures/computelog2FC-1.png")
+```

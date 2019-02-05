@@ -1,0 +1,151 @@
+---
+title: "Generate log2 Fold Change Data"
+author: "Santiago Medina"
+date: "2/5/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+theme_set(theme_light())
+```
+
+The goal of this notebook is to generate the log2 Fold Change data, this data will be usefull in other analysis.
+
+
+
+```{r load}
+tc_alpha <- read_csv("../19-01-09-RNAseqProfilesFish/rna-seq-profiles/alpha-amanitin-prolife.csv")
+tc_polya <- read_csv("../19-01-09-RNAseqProfilesFish/rna-seq-profiles/polyA-profile.csv")
+tc_ribo <- read_csv("../19-01-09-RNAseqProfilesFish/rna-seq-profiles/ribo-zero-profile.csv")
+```
+
+```{r computelog2FC}
+## use a function factory
+logFCnormalizer <- function(time_var) {
+  function(x) {
+    log2(x / time_var)
+  }
+}
+
+test <- 
+  tc_alpha %>% 
+  mutate_if(is.numeric, function(x) logFCnormalizer(.$s_alpha_2h)(x))
+
+## test check that output is correct
+
+test_check <- any(
+  !test$s_alpha_7.5h == (log2(tc_alpha$s_alpha_7.5h / tc_alpha$s_alpha_2h)),
+  na.rm = T
+)
+
+if (test_check) stop("you did something wrong")
+
+# cool function works, now apply
+fc_alpha <- tc_alpha %>% 
+  mutate_if(
+  .predicate = is.numeric,
+  .funs = function(x) logFCnormalizer(.$s_alpha_2h)(x)
+)
+
+fc_polya <- tc_polya %>% 
+  mutate_if(
+  is.numeric,
+  function(x) logFCnormalizer(.$s_wt_0h)(x)
+)
+
+fc_ribo <- tc_ribo %>% 
+  mutate_if(
+  is.numeric,
+  function(x) logFCnormalizer(.$s_wt_0h)(x)
+)
+
+
+## tidy data to put it together
+
+tidy_fc <- function(fc_tc, .sample_condition) {
+  fc_tc %>% 
+    select(-Name) %>% 
+    gather(key = tmpvar, value = log2FC, -Gene_ID) %>% 
+    mutate(
+      time = str_extract(tmpvar, "\\d\\.?\\d?") %>% as.numeric()
+    ) %>% 
+    select(-tmpvar) %>% 
+    mutate(sample_condition = .sample_condition)
+}
+
+fc_time_course <- bind_rows(
+  tidy_fc(fc_ribo, .sample_condition = "wt_ribo"),
+  tidy_fc(fc_polya, .sample_condition = "wt_polya"),
+  tidy_fc(fc_alpha, .sample_condition = "aamanitin_polya")
+)
+
+## let's plot 100 random genes
+
+fc_time_course %>% 
+  filter(Gene_ID %in% sample(Gene_ID, 1000)) %>% 
+  ggplot(aes(x = time, y = log2FC, group = Gene_ID)) +
+  geom_line(alpha = 1/10) +
+  facet_grid(~sample_condition) +
+  labs(title = "log2FC late vs early")
+```
+
+
+I will ad an indicator column if the gene is maternal. I have a list of genes that are supposly maternal (*../19-01-17-EMBO2016DATA/datasets/Half_life_Zebrafish.txt*) although I am not 100% sure.
+
+```{r maternals, fig.width=6, fig.height=2.5}
+maternals <- read_tsv("../19-01-17-EMBO2016DATA/datasets/Half_life_Zebrafish.txt") %>% 
+  pull(gene)
+
+fc_time_course <- mutate(fc_time_course, is_maternal = Gene_ID %in% maternals)
+
+# repeat the plot above, is there a pattern
+fc_time_course %>% 
+  ggplot(aes(x = as.character(time), y = log2FC, fill = is_maternal)) +
+  geom_boxplot(outlier.shape = NA, alpha = 1/2) +
+  ggthemes::scale_fill_colorblind() +
+  facet_wrap(. ~ sample_condition, scales = "free") +
+  coord_cartesian(ylim = c(-7, 7)) +
+  theme(legend.position = "bottom")
+
+```
+
+Save the data, I will also save a tidy version of the time course data in case i want to see effect of regulatory sequences at the RNA level.
+
+```{r savedata}
+
+write_csv(fc_time_course, "data/log2FC_earlyVSlate_tidytimecourse.csv")
+
+# here I will also generate a tidy version of the time course
+# in case i want to compare mRNA levels, i can resuse the same function
+
+time_course_tidy <- bind_rows(
+  tidy_fc(tc_ribo, .sample_condition = "wt_ribo"),
+  tidy_fc(tc_polya, .sample_condition = "wt_polya"),
+  tidy_fc(tc_alpha, .sample_condition = "aamanitin_polya")
+) %>% 
+  rename(TPM = log2FC) %>% # in this case the values are TPMs not log2FC
+  mutate(is_maternal = Gene_ID %in% maternals)
+
+write_csv(time_course_tidy, "data/RNAseq_tidytimecourse.csv")
+```
+
+```{r info}
+sessionInfo()
+```
+
+
+
+
+

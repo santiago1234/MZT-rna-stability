@@ -55,4 +55,5 @@ results/.here
 # ignore files for the lab notebook
 doc/lab-notebook/_book/
 doc/results/* # this file i think is a copy of the figures generated
+doc/data/ # the same as aboce
 # when the book is compiled
