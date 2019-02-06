@@ -1,7 +1,6 @@
 # February
 
-
-```{r settings, echo=FALSE}
+```{r settings_feb, echo=FALSE}
 knitr::opts_chunk$set(echo = F)
 ```
 
@@ -42,3 +41,43 @@ Below is a plot of log2FC for some genes, the log2FC was computed with respect t
 ```{r log2FC, out.width='130%', fig.cap='log2 time point / earliest time point'}
 knitr::include_graphics("../../data/19-02-05-FoldChangeData/figures/computelog2FC-1.png")
 ```
+
+I generated a plot of the regulatory effect for the previously identified k-mer sequences in the log2 fold change data.
+
+```{r kmerprofile, fig.cap='k-mer profiles'}
+knitr::include_graphics("../../results/19-02-05-PlotElementsProfiles/figures/old_candidate_kmers_profilies-1.png")
+```
+
+
+We can see that only the stabilizing k-mers show strong evidence of affecting mRNA stability. But now that we have the time course we can develop a better model to identify potential regulatory elements. 
+
+## Identifying Regulatory K-mers
+
+We hypothesize that codon optimality has a masking effect; therefore, we need to control for it. Also, we need to control for MiR-430 since we don't need to rediscover it. 
+
+I propose the following model:
+
+$$
+logRNA = \alpha_0 + \beta_0logRNA_{t=0} + \beta_1Optimality + \beta_2MiR430 + \beta_3time + \beta_4kmer + \beta_5time\;kmer
+$$
+more on the parameters:
+
++ $\beta_0$ is the RNA level at t=0, if we substract from both sides then we are modeling
+the log2 fold change. (I may not included and just simply model log fold change).
+
++ $\beta_1$ This is codon optimality, here I use the 2 PLS components produced in as an indicator of codon optimality in [Supervised Dimensional Reduction of the Codon Space].
+
++ $\beta_2$ MiR-430 indicator variable
+
++ $\beta_3$ Time affects expression
+
++ $\beta_4$ Elements
+
++ $\beta_5$ More importantly i need to define how the element interacts with time, this interaction may be a polynomial interaction.
+
+
+Model critic
+
++ The data in this model suffers from [heteroscedasticity](https://en.wikipedia.org/wiki/Heteroscedasticity), due to transcription, i need to consider this when modeling.
+
+I will fit this model for each 6-mer there will be $2^6$ 6-mers, when modeling I will also do a comparison with the null model to save this as a metric.

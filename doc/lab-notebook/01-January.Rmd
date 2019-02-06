@@ -1,11 +1,13 @@
 # January
 
-```{r settings, echo=FALSE}
+```{r settings_jan, echo=FALSE}
 knitr::opts_chunk$set(echo = F)
 ```
 
+## Setting the project
 
-## 19-01-09
+
+### 19-01-09
 
 + Created directory organization based on [@10.1371/journal.pcbi.1000424]
 + Started version control with git. I host a private [github repo](https://github.com/santiago1234/MZT-rna-stability)
@@ -14,7 +16,7 @@ knitr::opts_chunk$set(echo = F)
 I have to re-run previews analysis and do some quality checks on this data. Ariel suggested to do: PCA, poly-A vs ribo (also the ratio) and then the model.
 
 
-## 19-01-10
+### 19-01-10
 
 + Run Exploratory analysis for RNA-seq time course (PCA), the PCA analysis looks find.
 
@@ -29,9 +31,9 @@ knitr::include_graphics("../../results/19-01-10-EDA-RNA-time-course/figures/biva
   ask Ariel or Comp-Bio. Also the following paper [@risso2014normalization] can be useful to read.
 
 
-## 19-01-15 
+### 19-01-15 
 
-#### Estimating decay rate a-amanitin data
+## Estimating decay rate in a-amanitin data
 
 Today I focus on getting the decay rate estimates. The following are things to keep in mind:
 
@@ -55,9 +57,9 @@ knitr::include_graphics("../../results/19-01-11-GetDecayRateFromTimeCourse/figur
 Note that at low expression the $\beta$ estimates tend to be more positve, this can be do to noise, consider filtering genes with alpha > 0.
 
 
-## 19-01-17
+### 19-01-17
 
-#### Download ORFs and 3' UTR seqs from with biomartR
+## Download ORFs and 3' UTR seqs from with biomartR
 
 + I downloaded the coding and 3' utr sequences for fish, I generated a table with the codon composition.
 
@@ -69,7 +71,7 @@ list.files("../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/")
 
 
 
-#### Compute CSC
+## Compute CSC
 
 Compute the CSC, this is a way to see if our a-amanitin experiments and
 half-life estimation works. It should correlate with the CSC of EMBO 2016.
@@ -95,12 +97,12 @@ knitr::include_graphics("../../results/19-01-17-EstimateCSC/figures/csc_cors-1.p
 
 
 
-## 19-01-18
+### 19-01-18
 
 + I created a project specific module to the [codonr package](https://github.com/santiago1234/codonr/blob/master/R/project_mzt_utils.R).
 + I put a function to load the codon composition and the decay rate.
 
-#### Supervised Dimensional Reduction of the Codon Space
+## Supervised Dimensional Reduction of the Codon Space
 
 I aplied the PLS analysis to the codon space supervised with the decay rate, these PLS component can be used as a fancier version of codon optimality, usefull when doing the model comparison between m6A or miR430 pathways.
 
@@ -116,9 +118,9 @@ knitr::include_graphics("../../results/19-01-18-ObtainEstimateOfCodonOptimalityP
 
 This analysis will be useful later.
 
-## 19-01-30
+### 19-01-30
 
-#### Predictive model mRNA stability
+## Predictive model mRNA stability
 
 I trained several predictive models of mRNA stability (decay rate a-amanitin profile) with the codon composition. The top-performing model is an SVM. This model explain about 1/4 of the variation in the mRNA stability.
 
