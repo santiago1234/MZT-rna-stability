@@ -2,7 +2,9 @@
 title: "PLS analysis"
 author: "Santiago Medina"
 date: "1/18/2019"
-output: html_document
+output: 
+  html_document:
+    keep_md: true
 ---
 
 
@@ -41,6 +43,9 @@ feature_extractor <-
 
 pls_components <- juice(feature_extractor)
 
+## save the pre-processing recipe and the PLS components
+write_rds(feature_extractor, "results_data/extrac_pls_components.rds")
+write_csv(pls_components, "results_data/pls_components_fish_genes.csv")
 ```
 
 cool! We have the estimates let's visualized and see how they correlate with the outcome.
