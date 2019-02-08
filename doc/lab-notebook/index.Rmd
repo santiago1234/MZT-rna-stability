@@ -10,12 +10,17 @@ link-citations: yes
 description: "this lab notebook records my daily progress in detail, my observations, questions and ideas realted with this project" 
 ---
 
+This is my lab notebook for the project: **"Deciphering post-transcriptional regulation during the MZT"**
+
 # Laboratory notebook
 
-This is a _sample_ book written in **Markdown**. You can use anything that Pandoc's Markdown supports, e.g., a math equation $a^2 + b^2 = c^2$.
-
+Here, I record my daily progress and ideas as suggested by [@10.1371/journal.pcbi.1000424].
 
 ### Data Sets
 
+Data sets can be found under the **data/** folder.
 
 ### Code
+
+I have write an R package [codonr](https://github.com/santiago1234/codonr) with functions that
+are use it in the project.

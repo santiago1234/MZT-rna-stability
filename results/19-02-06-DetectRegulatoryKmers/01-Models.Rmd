@@ -1,0 +1,274 @@
+---
+title: "Modelin mRNA Dynamics during MZT"
+author: "Santiago Medina"
+date: "2/6/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/01_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(gridExtra)
+library(brms)
+theme_set(theme_light())
+```
+
+## Overview
+
+In section **3.3 Identifying Regulatory K-mers** of my lab notebook I disscuss the main idea of modeling this data. The final goal is to identify candidate regulatory sequences that affect mRNA stability.
+
+I start by testing some models in the wildtype ribo0 data.
+
+The goal of this notebook is just to explore the models.
+
+```{r mdl_data}
+# make model data frame
+
+mdlframe <- codonr::make_mdl_frame(
+  log2FCtimecourse_dp = "../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv",
+  pls_optimality_dp = "../../results/19-01-18-ObtainEstimateOfCodonOptimalityPLS/results_data/pls_components_fish_genes.csv",
+  utrs_dp = "../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/fish_seq_data_cds_3utr.csv",
+  kmers_to_keep = c("GCACTT", "GTGCGT"), # mir-430 and a unstable element where i think was a false positive
+  .sample_condition = "wt_ribo",
+  .maternal = T,
+  minimum_time_point = 3
+)
+```
+
+## Data Viz
+
+We want to model the following distribution.
+
+```{r viz, fig.height=8, fig.width=12}
+p1 <- mdlframe %>% 
+  ggplot(aes(x=log2FC)) +
+  geom_histogram(bins = 200) +
+  labs(title = "response distribution")
+
+p2 <- mdlframe %>% 
+  ggplot(aes(x=log2FC, group=time, color=time)) +
+  geom_density() +
+  coord_cartesian(xlim = c(-6, 6))
+
+p3 <- mdlframe %>% 
+  ggplot(aes(x=as.character(time), y=log2FC, fill = GCACTT > 0)) +
+  geom_boxplot(outlier.shape = ".") +
+  labs(
+    x = "time (hrs)",
+    fill = "MiR-430 targets"
+  ) +
+  coord_cartesian(ylim = c(-6.5, 5)) +
+  scale_fill_manual(values = c("grey", "steelblue"))
+
+p4 <- mdlframe %>% 
+  select(log2FC, PLS1, PLS2, time) %>% 
+  ggplot(aes(x=PLS1, y=log2FC, color = PLS2)) +
+  geom_point(shape = ".") +
+  facet_grid(~time) +
+  scale_color_viridis_c() +
+  geom_smooth(color = "black", size = 1/2) +
+  coord_cartesian(ylim = c(-5, 5)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Codon Optimality", subtitle = "time")
+
+grid.arrange(p1, p2, p3, p4)
+```
+
+The plot above shows sevaral aspects of the data.
+
++ Time is the top predictor (accounts for the dynamics)
++ Variation increases with time
++ All the other predictor interact with time
+
+The point is to discover which other element (6-mer) affects mRNA dynamics after
+controling for this predictors.
+
+
+## Models
+
+Here, I test a several models:
+
+model 1, time only model
+
+$$
+\begin{aligned}
+log2FC &\sim Normal(\mu_i, \sigma) \\
+\mu_i &= \alpha + \beta_1 t + \beta_2 t^2
+\end{aligned}
+$$
+
+model 2, model variance with square term on time
+$$
+\begin{aligned}
+log2FC &\sim Normal(\mu_i, \sigma_i) \\
+\mu_i &= \alpha + \beta_1 t + \beta_2 t^2 \\
+\sigma_i &= \alpha + \gamma_1 t + \gamma_2 t^2
+\end{aligned}
+$$
+model 3, add optimality interaction with time
+
+$$
+\begin{aligned}
+log2FC &\sim Normal(\mu_i, \sigma_i) \\
+\mu_i &= \alpha + \beta_1 t + \beta_2 t^2 + O_i \\
+O_i &= PLS_1(\beta_3 + \beta_4 t) + PLS_2(\beta_5 + \beta_6 t) \\
+\sigma_i &= \alpha + \gamma_1 t + \gamma_2 t^2
+\end{aligned}
+$$
+
+model 4, add Mir-430 time interaction
+
+$$
+\begin{aligned}
+log2FC &\sim Normal(\mu_i, \sigma_i) \\
+\mu_i &= \alpha + \beta_1 t + \beta_2 t^2 + O_i + MiR_i\\
+O_i &= PLS_1(\beta_3 + \beta_4 t) + PLS_2(\beta_5 + \beta_6 t) \\
+MiR_i &= M(\beta_7 + \beta_8 t)\\
+\sigma_i &= \alpha + \gamma_1 t + \gamma_2 t^2
+\end{aligned}
+$$
+
+Variables definition
+
++ $t$ time in hours
++ $O_i$ codon optimality for gene$_i$: ($PLS_1$ and $PLS_2$ are the PLS components)
++ $M$ number of Mir430 6-mers sites in the 3' UTR
+
+I scale the predictors for all the models and also i substract the time the minimum
+time point so starts at 0
+
+```{r preprocessing}
+scaler <- function(x) (x - mean(x)) / sd(x)
+
+mdlframe_preproc <- 
+  mdlframe %>% 
+  mutate_if(is.numeric, scaler)
+```
+
+
+```{r models, cache=TRUE}
+
+bform1 <- bf(
+  log2FC ~ time + I(time^2)
+)
+m1 <- brm(
+  bform1,
+  data = mdlframe_preproc,
+  family = gaussian(),
+  chains = 1,
+  cores = 1
+)
+
+bform2 <- bf(
+  log2FC ~ time + I(time^2),
+  sigma ~ poly(time, 2)
+)
+m2 <- update(m1, formula. = bform2, newdata = mdlframe_preproc)
+
+bform3 <- bf(
+  log2FC ~ I(time^2) + time*PLS1 + time*PLS2,
+  sigma ~ poly(time, 2)
+)
+m3 <- update(m2, formula. = bform3, newdata = mdlframe_preproc)
+
+bform4 <- bf(
+  log2FC ~ I(time^2) + time*PLS1 + time*PLS2 + time*GCACTT,
+  sigma ~ poly(time, 2)
+)
+m4 <- update(m3, formula. = bform4, newdata = mdlframe_preproc)
+```
+
+
+### Model Checking 
+
+
+```{r params, fig.width=2, fig.height=5}
+
+get_coef <- function(mdl, mdl_id = "id") {
+  posterior_summary(mdl) %>% 
+    as.data.frame() %>% 
+    as_tibble(rownames = "param") %>% 
+    mutate(mdl = mdl_id) %>% 
+    select(mdl, everything()) %>% 
+    filter(
+      !param %in% c("lp__", "b_Intercept", "b_time"),
+      !str_detect(param, "sigma")
+    )
+}
+
+parameters <- bind_rows(
+  get_coef(m1, "m1"),
+  get_coef(m2, "m2"),
+  get_coef(m3, "m3"),
+  get_coef(m4, "m4")
+)
+
+parameters %>% 
+  ggplot(aes(y = mdl, x = Estimate)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = Q2.5, xmax = Q97.5), height = 0) +
+  geom_vline(xintercept = 0, linetype = 3) +
+  facet_grid(param~., space = "free", scales = "free") +
+  labs(title = "Parameter estimates across models")
+  
+```
+
+
+```{r mdl_comparison}
+# ... are the fitted models
+waic_res <- waic(m1, m2, m3, m4)
+```
+
+```{r mdl_check}
+preds <- predict(m4) %>% 
+  as_tibble() %>% 
+  rename_all(function(x) str_c("pred_", x))
+resid <- resid(m4) %>% 
+  as_tibble() %>% 
+  rename_all(function(x) str_c("pred_", x))
+
+bind_cols(preds, resid, mdlframe) %>% 
+  ggplot(aes(x=pred_Estimate, y=log2FC, color = PLS1)) +
+  geom_point(shape=".") +
+  scale_color_viridis_c() +
+  facet_grid(~time) +
+  geom_abline(linetype = 3)
+  
+```
+
+Ok, the goal here was just to stablish the final model:
+
+$$
+\begin{aligned}
+log2FC &\sim Normal(\mu_i, \sigma_i) \\
+\mu_i &= \alpha + \beta_1 t + \beta_2 t^2 + O_i + MiR_i + K_i\\
+O_i &= PLS_1(\beta_3 + \beta_4 t) + PLS_2(\beta_5 + \beta_6 t) \\
+MiR_i &= M(\beta_7 + \beta_8 t)\\
+K_i &= K(\beta_9 + \beta_{10} t)\\
+\sigma_i &= \alpha + \gamma_1 t + \gamma_2 t^2
+\end{aligned}
+$$
+
++ $K$ number of k-mer sites in the 3' UTR
+
+The null hypothesis is $\beta_9 = 0$, $\beta_{10} = 0$, which kmers are significant?
+
+
+I will run the above model for every combination of 6-mers.
+
+See the corresponfing section in the lab notebook. There I describe the prior, but i end up using a lasso prior.
+### session info
+
+```{r session}
+sessionInfo()
+```
+
