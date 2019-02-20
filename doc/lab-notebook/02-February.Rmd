@@ -123,3 +123,59 @@ knitr::include_graphics("../../results/19-02-06-DetectRegulatoryKmers/figures/01
 ```
 
 
+### 19-02-13
+
+I've being runing the model. 
+
+The following plot summarizes the results.
+
+
+```{r mdres, fig.cap="model summary"}
+knitr::include_graphics("../../results/19-02-06-DetectRegulatoryKmers/figures/02_mdlsummary1-1.png")
+```
+
+
+This plot shows the effect of the mid-time point (~6hr) in the x-axis and the interaction
+time effect (y-axis). How can we select the top sequences?.
+
+I will create a data frame that for each k-mer has the following information:
+
++ status: stabilizing (effect positive or negative in both ribo and poly wt, an effect at 6)
++ there are six parameters, for each parameter I will say if 0 is in the interval (significance)
++ columns with the impact (for the six parameters)
++ zygotic program (if the status is significant) is there a positive effect in a-amanitin.
+
+
+### 19-02-20
+
+I selected the candidate sequences with the following criteria.
+
+They should show a significant effect (95 CI not overlaps 0) in both parameters (k-mer effect and time/k-mer interaction) and both wild type conditions. Most of the resulting k-mers seem to show a stabilizing, only for destabilizing effect I allowed to be significant in at least one condition.
+
+the following plot highlights the candidate sequences.
+
+```{r cand2}
+knitr::include_graphics("../../results/19-02-06-DetectRegulatoryKmers/figures/02_showcandidates-1.png")
+```
+
+And a hetamp with the effect over time.
+
+```{r cand4, fig.cap="effect over time"}
+knitr::include_graphics("../../results/19-02-06-DetectRegulatoryKmers/figures/02_candidates_heatmpa-1.png")
+```
+
+With this, I have a list of 69 candidates sequences. What are the best k-mers? For this, I will do a feature selection analysis.
+
+## Feature Selection to identify top k-mers sequences
+
+I fit the following model using the LASO, the model was fit independently for each time point and condition.
+
+
+$$
+\begin{aligned}
+log_2(\text{fold change}) = \alpha + \beta_1PLS_{1i} + \beta_2PLS_{2i} + 
+\beta_3Mir430_{i} +
+\sum_{i=4}^{72} \beta_i\;kmer_i + \lambda \sum_{j=1}^{72} |\beta_j|
+\end{aligned}
+$$
+
