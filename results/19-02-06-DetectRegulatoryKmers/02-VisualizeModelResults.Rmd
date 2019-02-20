@@ -1,0 +1,316 @@
+---
+title: "Visualize Models, Identify Potential k-mers"
+author: "Santiago Medina"
+date: "2/8/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/02_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(gridExtra)
+theme_set(theme_light())
+```
+
+
+## Overview
+
+```{r load_results, eval=FALSE}
+## remove eval false to collect results
+deviances <- 
+  list.files("results_data/test_kmers/mdl_deviance", pattern = "waic", full.names = T) %>% 
+  map_df(read_csv)
+
+params <- 
+  list.files("results_data/test_kmers/mdl_deviance", pattern = "params", full.names = T) %>% 
+  map_df(read_csv)
+
+## save the results
+write_csv(params, "results_data/estimated_parameters_6mers.csv")
+write_csv(deviances, "results_data/waic_6mers.csv")
+```
+
+```{r relode}
+params <- read_csv("results_data/estimated_parameters_6mers.csv")
+deviances <- read_csv("results_data/waic_6mers.csv")
+```
+
+
+## plot parameters of default model
+
+```{r default_model}
+dflt <- read_csv("results_data/test_kmers/mdl_deviance/GCACTT_params.csv")
+mir_waic <- read_csv("results_data/test_kmers/mdl_deviance/GCACTT_waic.csv") %>% 
+  filter(val == "waic")
+dflt %>% 
+  filter(
+    parameter %in% c("b_PLS1", "b_PLS2", "b_GCACTT", "b_time:GCACTT", "b_time:PLS1", "b_time:PLS2")
+  ) %>% 
+  ggplot(aes(x=Estimate, y=reorder(parameter, Estimate))) +
+  geom_point(shape=1) +
+  geom_errorbarh(aes(xmin = Q2.5, xmax = Q97.5, height = 0)) +
+  geom_vline(xintercept = 0, linetype = 3) +
+  facet_grid(~sample_name)
+```
+
+
+```{r eda}
+## deviance distribution
+deviances %>% 
+  filter(val == "waic") %>% 
+  filter(sample_name != "aamanitin_polya") %>% 
+  ggplot(aes(Estimate)) +
+  geom_histogram(bins = 50) +
+  facet_grid(~sample_name, scales = "free_x") +
+  labs(
+    x = "WAIC",
+    title = "model deviances"
+  ) + 
+  geom_vline(
+    data = filter(mir_waic, sample_name != "aamanitin_polya"),
+    aes(xintercept = Estimate), linetype = 3
+    ) +
+  scale_x_log10()
+```
+
+
+
+```{r mdlsummary1}
+
+# extract parameter associated with the k-mer
+b_mer <- 
+  params %>% 
+  filter(
+    str_detect(parameter, "b_[ACGT]+"),
+    str_extract(parameter, "[ACGT]+") == kmer,
+  ) %>% 
+  rename_if(is.numeric, .funs = function(x) str_c("b_mer_", x))
+
+# time interaction parameter
+b_mer_time <- 
+  params %>% 
+  filter(
+    str_detect(parameter, "b_time:[ACGT]+"),
+    str_extract(parameter, "[ACGT]+") == kmer,
+  ) %>% 
+  rename_if(is.numeric, .funs = function(x) str_c("b_time_", x))
+
+# extract the waic
+waics <- deviances %>% 
+  filter(val == "waic") %>% 
+  rename(waic =Estimate, waic_se = SE) %>% 
+  select(-val)
+
+
+mdl_res <- 
+  inner_join(b_mer, b_mer_time, by = c("sample_name", "kmer")) %>% 
+  inner_join(waics, by = c("sample_name", "kmer"))
+  
+mdl_res %>% 
+  ## standarize waic just for visualization porposes
+  group_by(sample_name) %>% 
+  mutate(waic = as.numeric(scale(waic))) %>% 
+  filter(sample_name != "aamanitin_polya") %>% 
+  ggplot(aes(b_time_Estimate, b_mer_Estimate, color = waic)) +
+  geom_point(size = 1/2) + 
+  geom_point(
+    data = filter(mdl_res, kmer == "GCACTT", sample_name != "aamanitin_polya"),
+    color = "black",
+    size = 3,
+    shape = 1
+  ) +
+  scale_color_viridis_c(option = "A") +
+  geom_vline(xintercept = 0, linetype = 3) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  facet_wrap(~sample_name, scales = "free_x") +
+  labs(
+    y = "k-mer affect at 6 hrs",
+    x = "k-mer/time interaction effect",
+    title = "6-mers profiles",
+    color = "WAIC\n(scaled)"
+  )
+```
+
+NOTE: In general there seems to be a positive effect of each k-mer. This maybe because of the UTR length affects mRNA stability as suggested by Mishima 2016. i may need to add a second model where I include the UTR length.
+
+
+correlate wild type effect with ribo0 effect.
+
+```{r corre_wt_polya}
+mdl_res %>% 
+  select(b_mer_Estimate, sample_name, kmer) %>% 
+  filter(sample_name != "aamanitin_polya") %>% 
+  spread(key = sample_name, value = b_mer_Estimate) %>% 
+  ggplot(aes(wt_polya, wt_ribo, label = kmer)) +
+  geom_point(size = 1/4) +
+  geom_abline(linetype = 3, color = "steelblue")
+```
+
+
+## Candidates
+
+What is a candidata k-mer?
+
++ effect in ribo 0
++ effect in poly A
++ WAIC better than the null model
+
+By effect I mean that the 95% of the posterior estimate does not contain 0.
+
+I will write a function to test each element.
+
+```{r test_kmer} 
+kprams <- 
+  params %>% 
+  filter(
+    str_detect(parameter, "b_[ACGT]{6}") |  str_detect(parameter, "b_time:[ACGT]{6}"),
+    str_extract(parameter, "[ACGT]{6}") == kmer
+  )
+
+
+test_kmer <- function(kmer_data) {
+ # returns k-mer state
+  is_positive <- 
+    kmer_data %>% 
+    filter(sample_name != "aamanitin_polya") %>% 
+    select( Q2.5:Q97.5) %>% 
+    gather() %>% 
+    pull(value) %>% 
+    (function(x) (x>0))() %>% 
+    all()
+  
+  down_polya <- kmer_data %>% 
+    filter(sample_name == "wt_polya") %>% 
+    select(Q2.5, Q97.5) %>% 
+    gather() %>% 
+    pull(value) %>%
+    (function(x) (x<0))() %>% 
+    all()
+  
+  down_ribo <- kmer_data %>% 
+    filter(sample_name == "wt_ribo") %>% 
+    select(Q2.5, Q97.5) %>% 
+    gather() %>% 
+    pull(value) %>%
+    (function(x) (x<0))() %>% 
+    all()
+  
+  if(!any(c(is_positive, down_polya, down_ribo))) return("no effect")
+  if (is_positive) return("stabilizing")
+  return("destabalizing")
+  
+}
+
+candidates <- 
+  kprams %>% 
+  group_by(kmer) %>% 
+  nest() %>% 
+  mutate(effect = map_chr(data, test_kmer)) %>% 
+  select(-data)
+
+## there seems to be some sequence that are not very significant
+## at the poly-A but show strong effect at 6
+other_candidates <- filter(b_mer, b_mer_Estimate > 0.075, sample_name == "wt_polya")$kmer
+
+write_csv(candidates, "results_data/candidates_6mers.csv")
+cat("How many candidates?", sum(candidates$effect != "no effect"))
+```
+
+```{r showcandidates}
+mdl_res %>% 
+  ## standarize waic just for visualization porposes
+  filter(sample_name != "aamanitin_polya") %>% 
+  inner_join(candidates) %>% 
+  filter(kmer != "GCACTT") %>% 
+  ggplot(aes(b_time_Estimate, b_mer_Estimate, color = effect, size = effect)) +
+  geom_point() + 
+  geom_vline(xintercept = 0, linetype = 3) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  facet_wrap(~sample_name, scales = "free_x") +
+  scale_size_manual(values = c(1, .005 ,1)) +
+  scale_color_manual(values = c("red", "grey", "blue")) +
+  labs(
+    y = "k-mer affect at 6 hrs",
+    x = "k-mer/time interaction effect",
+    title = "6-mers profiles",
+    color = "candidate k-mer"
+  ) +
+  theme(legend.position = "none")
+```
+
+## Candidate sequences
+
+Plot profiles effects
+
+```{r candidates_heatmpa, fig.height=6.5, fig.width=3}
+timeh <- tibble(t = 4:7, t_scaled =  as.numeric(scale(t)))
+
+effect_equation <- function(b_kmer, b_kmer_time) {
+  function(t) {
+    b_kmer + b_kmer_time * t
+  }
+}
+
+get_effects_kmer <- function(.kmer) {
+  filter(params, kmer == .kmer) %>% 
+    filter(
+      str_extract(parameter, "[ACGT]+") == kmer,
+      kmer == .kmer
+    ) %>% 
+    select(
+      parameter, Estimate, sample_name
+    ) %>%
+    mutate(parameter = map_chr(parameter, ~if_else(str_detect(., "time"), "interaction", "effect_b"))) %>% 
+    spread(key = parameter, value = Estimate) %>% 
+    mutate(p_eq = map2(effect_b, interaction, effect_equation)) %>% 
+    mutate(effect = map(
+      p_eq,
+      function(x) mutate(timeh, effect_kmer = map_dbl(t_scaled, x))
+    )) %>% 
+    select(sample_name, effect) %>% 
+    unnest(effect)
+  
+}
+
+
+dp <- waics %>% 
+  group_by(kmer) %>% 
+  mutate(waic = as.numeric(scale(waic))) %>% 
+  summarise(mean_waic = mean(waic)) %>% 
+  inner_join(candidates) %>% 
+  filter(effect != "no effect") %>% 
+  mutate(ef = map(kmer, get_effects_kmer)) %>% 
+  unnest(ef)
+
+order_mers <- dp %>% 
+  filter(t == 7, sample_name == "wt_ribo") %>% 
+  arrange(-effect_kmer) %>% 
+  pull(kmer)
+
+dp %>% 
+  mutate(kmer = factor(kmer, levels = order_mers)) %>% 
+  ggplot(aes(y=kmer, x=t, fill = effect_kmer)) +
+  geom_tile() +
+  facet_grid(effect~sample_name, space="free", scales = "free") +
+  scale_fill_gradient2(low = "red", high = "steelblue", mid = "white", midpoint = 0) +
+  scale_x_continuous(expand = c(0, 0), breaks = 4:7) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(
+    x = "time (hrs)",
+    title = "candidate regulatory 6-mers",
+    color = "effect"
+  ) +
+  theme(axis.text.y = element_text(size = 4),
+        axis.text.x = element_text(size = 4),
+        strip.text.x = element_text(size = 4))
+```
+
