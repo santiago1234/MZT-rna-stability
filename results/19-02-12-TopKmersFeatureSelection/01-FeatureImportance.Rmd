@@ -1,0 +1,208 @@
+---
+title: "Feature Selection (k-mers)"
+output: 
+  html_document:
+    keep_md: true
+---
+
+## Overview
+
+From the k-mers that were detected in the previous analysis, which ones are the most important to predict the log2Fold Change?
+
+I will conduct this analysis in the poly-A data.
+
+```{r load_data, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/01_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(magrittr)
+library(glmnet)
+library(recipes)
+library(rsample)
+
+theme_set(theme_light())
+
+fc <- read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv")  %>% 
+  filter(time > 4, is_maternal, time < 8, time %% 1 == 0)
+
+candidate_kmers <- read_csv("../19-02-06-DetectRegulatoryKmers/results_data/candidates_6mers.csv") %>% filter(effect != "no effect")
+
+
+## utr data
+utrs <- 
+  read_csv("../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/fish_seq_data_cds_3utr.csv")
+
+for (kmer in candidate_kmers$kmer) {
+  utrs[, kmer] <- str_count(utrs$`3utr`, kmer)
+}
+
+utrs <- select(utrs, -coding, -`3utr`) %>% 
+  rename(Gene_ID = ensembl_gene_id)
+
+optimality <- read_csv("../19-01-18-ObtainEstimateOfCodonOptimalityPLS/results_data/pls_components_fish_genes.csv") %>% 
+  select(-decay_rate)
+
+
+mdldat <- 
+  list(fc, optimality, utrs) %>% 
+  reduce(.f = inner_join, by = "Gene_ID") %>% 
+  select(-is_maternal, -Gene_ID)
+```
+
+
+
+
+```{r fitting}
+fit_lasso_mdl <- function(data) {
+  # I standardize the response variable so we can also perform
+  # visual comparisons across data sets
+  
+
+  # fit lasso
+  x <- as.matrix(select(data, -log2FC))
+  y <- as.numeric(scale(data$log2FC))
+  lasso.mod <- cv.glmnet(x, y, alpha=1, nfolds = 5, standardize =T, intercept=F)
+  
+  lpath <- coef(lasso.mod$glmnet.fit) %>% 
+  as.matrix() %>% 
+  as_tibble(rownames = "predictor") %>% 
+  gather(key = l, value = coef, -predictor) %>% 
+  inner_join(tibble(l = paste0("s", 0:(length(lasso.mod$lambda)-1)), lambda = lasso.mod$lambda))
+  
+  ## add a vector with predictors passign the filter
+  relevant_features <- lpath %>% 
+    filter(lambda == lasso.mod$lambda.min)  %>% 
+    filter(abs(coef) > 0) %>% 
+    filter(predictor != "(Intercept)") %>% 
+    pull(predictor)
+  
+  ## get the coefficients at the best lambda value
+  
+  list(
+    lasso_path = lpath,
+    mdl = lasso.mod,
+    relevant_features = tibble(feature = relevant_features),
+    coefs_best_lambda = filter(lpath, near(lambda, lasso.mod$lambda.min))
+  )
+}
+
+
+fits <- mdldat %>%
+  group_by(sample_condition, time) %>% 
+  nest() %>% 
+  mutate(lass_fits = map(data, fit_lasso_mdl))
+```
+
+## visualizations
+
+```{r lasso_path, fig.height=10, fig.width=9}
+fits <- 
+  fits %>% 
+  mutate(
+    lasso_path = map(lass_fits, ~.[["lasso_path"]]),
+    best_lambda = map(lass_fits, ~.[["mdl"]]$lambda.min),
+    top_features = map(lass_fits, ~.[["relevant_features"]]),
+    coefs_best_lambda = map(lass_fits, ~.[["coefs_best_lambda"]])
+  )
+
+
+top <- fits %>% 
+  filter(sample_condition != "aamanitin_polya", time > 5) %>% 
+  unnest(top_features) %>%
+  count(feature) %>% 
+  filter(n == 4) %>% 
+  pull(feature)
+
+# function to add a meaningfull color -------------------------------------
+cls <- function(x) {
+  if (x %in% c("PLS1", "PLS2")) return("optimality")
+  if (x == "GCACTT") return("MiR-430")
+  if (x %in% top) {
+    if (x %in% filter(candidate_kmers, effect == "stabilizing")$kmer) return("stabilizing k-mer")
+    else return("destabilizing k-mer")
+  }
+  else ("false positve")
+}
+
+
+fits %>% 
+  select(sample_condition, time, lasso_path) %>% 
+  unnest() %>% 
+  mutate(
+    predictor_code = map_chr(predictor, cls),
+    time = paste0(time, " hrs")
+  ) %>% 
+  filter(!predictor %in% c("(Intercept)")) %>% 
+  ggplot(aes(1/lambda, coef, group = predictor, color = predictor_code, size = predictor_code)) +
+  geom_line() +
+  geom_vline(
+    data = unnest(fits, best_lambda) %>% mutate(time = paste0(time, " hrs")),
+    aes(xintercept = 1/best_lambda),
+    linetype = 3, alpha = 3/4
+  ) +
+  scale_size_manual(values = c(.25, .2, .6, .6, .25)) +
+  scale_x_log10() +
+  scale_color_manual(values = c("#E69F00", "grey", "#D55E00", "black", "#009E73")) +
+  facet_grid(sample_condition~time) +
+  labs(
+    title = "Effect of Predictors in mRNA stability during MZT",
+    subtitle = "Lasso Coeficient Path",
+    y = "standardized coefficients (relative effect)",
+    x = "regularization parameter"
+  )
+
+```
+
+```{r coefs_at_six, fig.height=6, fig.width=5}
+# plot predictors that past the filter ------------------------------------
+coefs_data <- 
+  fits %>% 
+  unnest(coefs_best_lambda) %>% 
+  filter(time == 6) %>% 
+  rename(kmer = predictor) %>% 
+  inner_join(
+    bind_rows(tibble(kmer = c("PLS1", "PLS2"), effect = "optimality"), candidate_kmers)
+  ) %>% 
+  filter(kmer %in% top)
+
+## sort k-mers by effect (do not consider aamanitin)
+relative_effect <- 
+  filter(coefs_data, sample_condition != 'aamanitin_polya') %>% 
+  group_by(kmer) %>% 
+  summarise(efc = mean(coef)) %>% 
+  arrange(efc) %>% 
+  pull(kmer)
+
+coefs_data %>% 
+  mutate(
+    kmer = factor(kmer, levels = relative_effect),
+    effect = factor(effect, levels = c("optimality", "stabilizing", "destabalizing"))
+  ) %>% 
+  ggplot(aes(coef, kmer, color = coef)) +
+  geom_point(size = 1) +
+  geom_errorbarh(aes(xmin = 0, xmax = coef)) +
+  geom_vline(xintercept = 0) +
+  scale_color_viridis_c() +
+  facet_grid(effect~sample_condition, space = "free", scale = "free_y") +
+  labs(
+    x = "standardized coefficients",
+    y = "predictor",
+    color = "effect",
+    title = "Effect on mRNA stability at 6 hrs",
+    subtitle = "log2 Fold Change"
+    
+  ) +
+  theme(axis.text.y = element_text(size = 4), axis.text.x = element_text(size = 3))
+```
+
+## TODO: save data results
+
+```{r saveres}
+write_csv(coefs_data, "results_data/top_candidates.csv")
+```
+

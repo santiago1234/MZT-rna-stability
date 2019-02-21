@@ -1,0 +1,142 @@
+---
+title: "Marginal Effects Cross Validation Data"
+author: "Santiago Medina"
+date: "2/19/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/02_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+
+library(tidyverse)
+theme_set(theme_light())
+
+# load data
+top_candidates <- 
+  read_csv("results_data/top_candidates.csv") %>% 
+  filter(sample_condition == "wt_ribo") %>% 
+  select(effect, kmer)
+
+# get the overall effect
+top_candidates <- 
+  read_csv("results_data/top_candidates.csv") %>% 
+  filter(sample_condition != "aamanitin_polya") %>%
+  group_by(kmer) %>% 
+  summarize(coef = mean(coef)) %>% 
+  inner_join(top_candidates)
+
+
+## marginal k-mer effects
+marg_efcts <- list.files("results_data", pattern = "marginal-effec", full.names = T) %>% 
+  map_df(read_csv) %>% 
+  left_join(top_candidates)
+```
+
+
+```{r marg_efcts, fig.height=8, fig.width=4}
+## add a variable for easier visualization
+
+meaning_name <- function(x) {
+  if (x %in% c("wt1_5h_polyfc", "wt2_6h_polyfc", "wt1_6h_ribofc", "mzdicerDuplex_6h_polyfc")) return("WT")
+  if (x %in% c("mzdicer_6h_polyfc", "lna_6h_ribofc")) return("dicer mt")
+  else ("AA")
+}
+
+is_sig <- function(x, y) {
+  if (sign(x) == sign(y)) return("*")
+  else return("")
+}
+
+order_x <- c( "wt1_5h_polyfc", "wt2_6h_polyfc", "wt1_6h_ribofc",
+              "mzdicerDuplex_6h_polyfc","mzdicer_6h_polyfc",
+              "lna_6h_ribofc", "mcounts")
+
+  
+marg_efcts %>% 
+  mutate(
+    condition = map_chr(rnasample, meaning_name),
+    condition = factor(condition, levels = c("WT", "dicer mt", "AA")),
+    rnasample = factor(rnasample, levels = order_x),
+    sig = map2_chr(ci_l, ci_u, is_sig),
+    effect = factor(effect, levels = c("stabilizing", "destabalizing"))
+  ) %>% 
+  ggplot(aes(x=rnasample, y = reorder(kmer, coef), fill = estimate)) +
+  geom_tile() +
+  geom_text(aes(label = sig)) +
+  scale_fill_gradient2() +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  facet_grid(effect  ~ condition, space = "free", scale = "free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) +
+  labs(
+    title = "k-mer effect in log2Fold Change late/early",
+    subtitle = "validation",
+    x = NULL,
+    y = NULL
+  )
+```
+
+
+From this we have the following remaining sequences.
+
+stabalizing: `TCGGCG, CTCCCG, TACGTC, CCTGGG, TTTTCT, CCCTTC`
+
+destabalizing: `AGACGG, TCCGTA`
+
+
+```{r}
+data <- read_csv("../../../rna-stability-model/experiments/18-03-29-TestKmersInRNAseqData/results/rnasamples_and_utrs.csv")
+
+
+kmers <- c("TCGGCG", "CTCCCG", "CCTGGG",
+           "AGACGG", "TCCGTA", "GCACTT")
+
+
+for(kmer in kmers) {
+  data[, kmer] <- str_count(data$seq, kmer)
+}
+
+
+data %>% 
+  select(TCGGCG:GCACTT) %>% 
+  gather() %>% 
+  group_by(key) %>% 
+  nest() %>% 
+  mutate(counts = map(data, ~as_tibble(table(.)))) %>% 
+  unnest(counts) %>% 
+  set_names(c("kmer", "sites", "n")) %>% 
+  ggplot(aes(x=sites, y=n)) +
+  geom_bar(stat = "identity") +
+  facet_grid(~kmer) +
+  scale_y_log10() +
+  coord_flip() +
+  labs(title = "number of sites in 3' UTR") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+
+```{r cum_effect, fig.width=5, fig.height=4}
+data %>% 
+  mutate(stable_mers = TCGGCG + CTCCCG + CCTGGG,
+         stable_mers = map_dbl(stable_mers, ~if_else(. > 2, as.numeric(2), as.numeric(.))),
+         unstable_mers = AGACGG + TCCGTA,
+         unstable_mers = map_dbl(unstable_mers, ~if_else(. > 2, as.numeric(2), as.numeric(.))),
+         ) %>% 
+  select(stable_mers, unstable_mers, wt1_6h_ribofc, wt2_6h_polyfc, mzdicer_6h_polyfc) %>% 
+  gather(key = "sample", value = "log2FC", -stable_mers, -unstable_mers) %>% 
+  gather(key = "effect", value = "sites", -sample, -log2FC) %>% 
+  ggplot(aes(x=log2FC, group = sites, color = sites)) +
+  stat_ecdf() +
+  stat_ecdf(color = "black", size = 1/10) +
+  facet_grid(sample~effect) +
+  scale_color_viridis_c(option = "A", breaks = 0:2, labels = c("no site", "1 site", ">1 sites")) +
+  coord_cartesian(xlim = c(-3.5, 2.5))
+```
+
