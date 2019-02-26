@@ -1,0 +1,114 @@
+---
+title: "m6A targets"
+author: "Santiago Medina"
+date: "2/26/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+## Are the m6A targets true targets?
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+
+library(gridExtra)
+theme_set(theme_light())
+ydhtf_mutant <- read_csv("m6A-data//m6A_time_course.csv") %>% 
+  select(gene_id, `mzKO Y2-/- 8h`, `mzKO Y2-/- 6h`, `wild-type 6h`, `wild-type 8h`) %>% 
+  rename(Gene_ID = gene_id)
+
+predictors <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  select(Gene_ID, m6A, MiR430) %>% 
+  mutate(MiR430 = MiR430 > 0)
+
+mzdicer <- read_csv("../../../181029-Paper/data/rna-time-course/dicer-data/cufflinks_fpkm_all.csv") %>% 
+  rename(Gene_ID = GeneID)
+data <- inner_join(ydhtf_mutant, predictors) %>% 
+  inner_join(mzdicer)
+```
+
+
+```{r comparison, fig.height=4, fig.width=8}
+data %>% 
+  select(-`mzKO Y2-/- 8h`, -`wild-type 8h`, -Name, -s_MZdicer_6h_430_duplex) %>% 
+  rename(
+    ydhtf_mutant = `mzKO Y2-/- 6h`, ydhtf_wt = `wild-type 6h`,
+    dizer_mutant = s_MZdicer_6h, dizer_wt = s_WT_6h,
+  ) %>% 
+  gather(key = sample, value = RPKM, -Gene_ID, -m6A, -MiR430) %>% 
+  filter(RPKM > 0.00001) %>% 
+  mutate(RPKM = log2(RPKM)) %>% 
+  group_by(sample) %>% 
+  mutate(RPKM = as.numeric(scale(RPKM))) %>% 
+  ungroup() %>% 
+  separate(sample, into = c("dataset", "condition"), sep = "_") %>% 
+  spread(key = condition, value = RPKM) -> x
+
+## define a category for each gene
+
+class <- predictors %>% 
+  mutate(
+    m6A_and_MiR430 = m6A & MiR430,
+    only_m6A = m6A & !MiR430,
+    only_MiR430 = !m6A & MiR430,
+    no_target = !m6A & !MiR430,
+  ) %>% 
+  select(-m6A, -MiR430) %>% 
+  gather(target_class, val, -Gene_ID) %>% 
+  filter(val) %>% 
+  select(-val) %>% 
+  mutate(
+    target_class = factor(target_class, levels = c(
+      "no_target",
+      "only_MiR430",
+      "only_m6A",
+      "m6A_and_MiR430"
+    ))
+  )
+
+datum <- inner_join(x, class)
+
+datum %>% 
+  ggplot(aes(x=wt, y = mutant)) +
+  geom_point(color = "steelblue", alpha = 1/5) +
+  geom_abline(linetype = 3) +
+  facet_grid(dataset~target_class) +
+  coord_cartesian(xlim = c(-3, 3), ylim = c(-3,3))
+```
+
+### Are the differences significant?
+
+```{r effects}
+datum %>% 
+  select(Gene_ID, mutant, wt, target_class, dataset) %>% 
+  gather(key = condition, value = expression, -Gene_ID, -target_class, -dataset) %>% 
+  group_by(dataset, target_class) %>% 
+  nest() %>% 
+  mutate(
+    fit = map(data, ~lm(expression ~ condition, data = .)),
+    tidy = map(fit, broom::tidy, conf.int = T)
+  ) %>% 
+  unnest(tidy) %>% 
+  filter(term != "(Intercept)") %>% 
+  ggplot(aes(x = estimate, y = target_class, color = p.value < 0.01)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.1) +
+  geom_vline(xintercept = 0, linetype = 3) +
+  facet_grid(~dataset) +
+  labs(y=NULL, title = "Effect Size")
+```
+
+
+## Conclusion
+
+Yes, I see what I expected.
