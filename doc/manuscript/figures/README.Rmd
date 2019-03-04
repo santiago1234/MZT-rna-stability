@@ -1,0 +1,57 @@
+---
+title: "Figrues Paper"
+author: "Santiago Medina"
+date: "3/4/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+In this folder I make the figures for the paper.
+
+## Fig.1 Codon composition strongly predicts mRNA stability
+
+Rationale: Codon optimality is an strong regulatory mechanism, therefore can we predict
+maternal mRNA decay based on the codon composition
+
+###  A)	Carton alpha amanitin (Ariel)
+
+### B) Half-life or decay distribution
+
+```{r 1b}
+knitr::include_graphics("fig01/figures/f01_decaydistribution-1.png")
+```
+
+
+
+## C) Model to predict mRNA decay in alpha (scatter plot, R and P value), How much can you explain
+
+```{r 1c, fig.cap="Test Data Predictions"}
+knitr::include_graphics("fig01/figures/f01_mdl_test_data_predictions-1.png")
+```
+
+
+### D) Calculate the mRNA decay of the 1nt out of frame (codon vs nt) 
+
+```{r 1d, fig.cap="Endogenous genes are shown in the background"}
+knitr::include_graphics("fig01/figures/f01_reporters_predictions-1.png")
+```
+
+## Supplementary Figure 1
+
+### a) PCA wild type and alpha (evidence it is a good dataset) (Santi)
+
+
+```{r s1a}
+knitr::include_graphics("../../../results/19-01-10-EDA-RNA-time-course/figures/pca-1.png")
+```
+
+### b) Scatter plot, alpha vs wildtype for each point (evidence zygotic expression blocked)
+
+```{r s1b}
+knitr::include_graphics("../../../results/19-01-10-EDA-RNA-time-course/figures/bivariate_polyA-1.png")
+```
+
+***
+
+## Fig.2 Codon composition strongly predicts maternal mRNA degradation during MZT
