@@ -1,0 +1,119 @@
+---
+title: "Codon composition strongly predicts mRNA stability"
+author: "Santiago Medina"
+date: "March 1, 2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/f01_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(ggthemes)
+library(caret)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+##	Half-life or decay distribution (Santi)
+
+```{r decaydistribution, fig.height=2, fig.width=3}
+# the beta parameter is the decay rate
+
+decay_aa <- 
+  read_csv("../../../../results/19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv") %>% 
+  filter(term == "beta")
+
+decay_aa %>% 
+  ggplot(aes(x=estimate)) +
+  geom_histogram(bins = 100) +
+  labs(
+    x = "decay rate",
+    title = "distribution of decay in alpha-Amanitin "
+  ) +
+  geom_rangeframe() +
+  theme(text = element_text(size = 8))
+
+```
+
+## C)	Model to predict mRNA decay in alpha (scatter plot, R and P value), How much can you explain (Santi)
+
+
+Best tuning parameters
+```{r tuning}
+mdl <- read_rds("../../../../results/19-01-22-PredictiveModelMrnaStability/results_data/trained_models/svmRModel.rds")
+mdl$bestTune
+```
+
+```{r mdl_test_data_predictions, fig.height=3, fig.width=3}
+# get a confidence interval
+r2_observed <- mean(mdl$resample$Rsquared)
+ci_r2 <- broom::tidy(t.test(mdl$resample$Rsquared), confint = T)
+
+## test data
+test_data <- read_csv("../../../../results/19-01-22-PredictiveModelMrnaStability/results_data/test_data.csv")
+
+test_data$prediction <- predict(mdl, test_data)
+
+
+test_data %>% 
+  ggplot(aes(prediction, decay_rate)) +
+  geom_point(size = 1/2, color = "steelblue") +
+  geom_abline(linetype = 3) +
+  ggpubr::stat_cor(size = 2) +
+  geom_rangeframe() +
+  labs(
+    subtitle = str_c("R2 = ", round(r2_observed, 3), " (", round(ci_r2$conf.low, 3), ", ", round(ci_r2$conf.high, 3), ") 95% CI"),
+    title = "Predictive Model Codon Composition",
+    x = "predicted",
+    y = "observed"
+  ) +
+  theme(text = element_text(size = 8))
+```
+
+
+D)	Calculate the mRNA decay of the 1nt out of frame (codon vs nt) and Gopal can inject those. (Santi and Gopal)
+
+TODO: tibble with reporter sequences
+I do not think that the reporter sequences I am using from the EMBO paper are correct.
+
+
+```{r reporters_predictions, fig.height=3, fig.width=2}
+reporters <- readxl::read_excel("results_data/reporters_sequences.xlsx")
+
+reporter_cc <- 
+  reporters %>% 
+  mutate(
+    cc = map(sequence, codonr::count_codons)
+  ) %>% 
+  select(reporter_id, cc) %>% 
+  rename(Gene_ID = reporter_id) %>% 
+  unnest(cc) %>% 
+  spread(key = codon, value = n) %>% 
+  replace(., is.na(.), 0)
+
+reporter_cc$prediction <- predict(mdl, newdata = reporter_cc)
+
+
+xsub <- reporter_cc %>% 
+  select(Gene_ID, prediction) %>% 
+  filter(str_detect(Gene_ID, "cherr"))
+
+mdl$trainingData %>% 
+  mutate(prediction = predict(mdl, newdata = .)) %>% 
+  ggplot(aes(x="", y = prediction)) +
+  geom_point(position = "jitter", color = "grey90", shape = ".") +
+  geom_point(data = xsub, aes(x="", y=prediction), color = "steelblue") +
+  ggrepel::geom_text_repel(data = xsub, aes(x="", y=prediction, label = Gene_ID), size = 2) +
+  labs(
+    x = NULL,
+    y = "predicted mRNA stability"
+  )
+```
