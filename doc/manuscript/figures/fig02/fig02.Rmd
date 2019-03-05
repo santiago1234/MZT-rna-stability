@@ -1,0 +1,176 @@
+---
+title: "Codon composition strongly predicts maternal mRNA degradation during MZT"
+author: "Santiago Medina"
+date: "3/4/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/f02_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(caret)
+library(ggthemes)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+B)	Apply your model to MZT (wildtype) (scatter plot, R and P value), How much can you explain. Color code Optimal, non-optimla, miR430 and add the median of each group
+
+Thinks to keep in mind:
+
++ I will take the log2 fold change between 2 and 6 hrs.
++ I define optimal genes bassed on PLS1 (top 500)
++ MiR430 bassed in 6-mer presence
+
+```{r getdata}
+tpms <- read_csv("../../../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/RNAseq_tidytimecourse.csv")
+
+fold_change <- 
+  tpms %>% 
+  filter(
+    sample_condition != "aamanitin_polya",
+    time %in% c(2, 6),
+    is_maternal
+  ) %>% 
+  select(-is_maternal) %>% 
+  spread(key = time, value = TPM) %>% 
+  mutate(
+    log2fc = log2((`6`/`2`) + 0.0001)
+  ) %>% 
+  select(-`2`, -`6`) %>% 
+  spread(key = sample_condition, value = log2fc)
+
+# get predicted mRNA stability
+
+mdl <- read_rds("../../../../results/19-01-22-PredictiveModelMrnaStability/results_data/trained_models/svmRModel.rds")
+
+data <- list.files("../../../../results/19-01-22-PredictiveModelMrnaStability/results_data/", pattern = "*csv", full.names = T) %>% 
+  map_df(read_csv) %>% 
+  filter(Gene_ID %in% fold_change$Gene_ID)
+
+fold_change <- data %>% 
+  mutate(
+    predictions = predict(mdl, newdata = .)
+  ) %>% 
+  select(Gene_ID, predictions) %>% 
+  inner_join(fold_change)
+
+# load predictors Mirtargets, PLS
+predictors <- 
+  read_csv("../../../../results/19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  select(Gene_ID, MiR430, PLS1, PLS2)
+
+x <- inner_join(fold_change, predictors)
+
+## fit a linear model to get the stability prediction in the same units
+
+fit_polya <- lm(wt_polya  ~ predictions, data = x)
+fit_ribo <- lm(wt_ribo  ~ predictions, data = x)
+x$prediction_ribo <- predict(fit_ribo)
+x$prediction_polya <- predict(fit_polya)
+```
+
+```{r pred_wt, fig.width=7, fig.height=4}
+x %>% 
+  mutate(MiR430 = MiR430 > 0) %>% 
+  ggplot(aes(prediction_ribo, wt_ribo, color = PLS1)) +
+  geom_point(size = 1/2) +
+  geom_abline() +
+  geom_rangeframe(color = "black") +
+  scale_color_viridis_c() +
+  facet_grid(~MiR430) +
+  labs(
+    color = "optimality", 
+    subtitle = "6.32% of data variation explained",
+    y = "log2 fold change (Ribo0)",
+    x = "prediction"
+  ) +
+  ggpubr::stat_cor(size=3)
+```
+
+```{r mir430residuals}
+x$residuals_ribo <- resid(fit_ribo)
+
+x %>% 
+  mutate(MiR430 = MiR430 > 0) %>% 
+  ggplot(aes(x=MiR430, residuals_ribo)) +
+  geom_jitter(width = 0.1, color = "grey", shape=".") +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_tufteboxplot() +
+  labs(
+    x = "Is target?",
+    y = "residuals",
+    title = "Model Over Estimates MiR430 targets"
+  ) +
+  coord_flip()
+```
+
+```{r liftchart, fig.height=3.2, fig.width=3}
+
+mir_p <- sum(x$MiR430 > 0)
+
+
+get_proprtion_in_ribofoldchange <- function(n) {
+  x %>% 
+    arrange(wt_ribo) %>% 
+    slice(1:n) %>% 
+    pull(MiR430) %>% 
+    (function(x) sum(x>0))
+}
+
+get_proprtion_in_resid <- function(n) {
+  x %>% 
+    arrange(residuals_ribo) %>% 
+    slice(1:n) %>% 
+    pull(MiR430) %>% 
+    (function(x) sum(x>0))
+}
+
+res <- tibble(
+  n = round(seq(1, nrow(x), length.out = 100)),
+  pSamplesTested = n/nrow(x),
+  pEventsFoundRibo = map_dbl(n, get_proprtion_in_ribofoldchange),
+  pEventsFoundResid = map_dbl(n, get_proprtion_in_resid)
+) %>% 
+  mutate(
+    pEventsFoundRibo = pEventsFoundRibo / mir_p,
+    pEventsFoundResid = pEventsFoundResid / mir_p
+  )
+
+
+optimal_mdl <- function(p_samples) {
+  if (p_samples > (mir_p / nrow(x))) return(1.0)
+  else return(p_samples / (mir_p / nrow(x)))
+}
+
+
+res %>% 
+  gather(key = keyrank, value = pEventsFound, -n, -pSamplesTested) %>% 
+  mutate(
+    randomModel = identity(pSamplesTested),
+    optimalModel = Vectorize(optimal_mdl)(pSamplesTested)
+  ) %>% 
+  ggplot(aes(x=pSamplesTested)) +
+  geom_ribbon(aes(ymin = randomModel, ymax=optimalModel), fill = "black", alpha = 1/5) +
+  geom_line(aes(y=pEventsFound, color = keyrank)) +
+  scale_color_colorblind("", labels=c("residual rank", "log2FC rank")) +
+  scale_x_continuous(labels = scales::percent, expand = c(0, 0)) +
+  scale_y_continuous(labels = scales::percent, expand = c(0, 0)) +
+  theme(legend.position = c(0.8, 0.2)) +
+  labs(
+    title = "Who does ranks better?",
+    subtitle = "Lift Chart",
+    y = "% MiR430 Found",
+    x = "% Samples Tested"
+  )
+```
+
