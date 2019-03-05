@@ -43,7 +43,7 @@ Save the data, I will also save a tidy version of the time course data in case i
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] bindrcpp_0.2.2  forcats_0.3.0   stringr_1.3.1   dplyr_0.7.8    
+##  [1] bindrcpp_0.2.2  forcats_0.3.0   stringr_1.4.0   dplyr_0.7.8    
 ##  [5] purrr_0.3.0     readr_1.3.1     tidyr_0.8.2     tibble_2.0.1   
 ##  [9] ggplot2_3.1.0   tidyverse_1.2.1
 ## 
@@ -51,17 +51,17 @@ Save the data, I will also save a tidy version of the time course data in case i
 ##  [1] Rcpp_1.0.0        cellranger_1.1.0  pillar_1.3.1.9000
 ##  [4] compiler_3.5.1    plyr_1.8.4        bindr_0.1.1      
 ##  [7] tools_3.5.1       digest_0.6.18     lubridate_1.7.4  
-## [10] jsonlite_1.5      evaluate_0.11     nlme_3.1-137     
+## [10] jsonlite_1.6      evaluate_0.11     nlme_3.1-137     
 ## [13] gtable_0.2.0      lattice_0.20-35   pkgconfig_2.0.2  
-## [16] rlang_0.3.1.9000  cli_1.0.1         rstudioapi_0.8   
-## [19] yaml_2.2.0        haven_1.1.2       withr_2.1.2      
+## [16] rlang_0.3.1.9000  cli_1.0.1         rstudioapi_0.9.0 
+## [19] yaml_2.2.0        haven_2.1.0       withr_2.1.2      
 ## [22] xml2_1.2.0        httr_1.3.1        knitr_1.20       
 ## [25] hms_0.4.2         rprojroot_1.3-2   grid_3.5.1       
 ## [28] tidyselect_0.2.5  glue_1.3.0        R6_2.3.0         
 ## [31] readxl_1.1.0      rmarkdown_1.10    reshape2_1.4.3   
 ## [34] modelr_0.1.2      magrittr_1.5      ggthemes_4.0.1   
-## [37] backports_1.1.2   scales_1.0.0      htmltools_0.3.6  
-## [40] rvest_0.3.2       assertthat_0.2.0  colorspace_1.3-2 
+## [37] backports_1.1.3   scales_1.0.0      htmltools_0.3.6  
+## [40] rvest_0.3.2       assertthat_0.2.0  colorspace_1.4-0 
 ## [43] labeling_0.3      stringi_1.2.4     lazyeval_0.2.1   
 ## [46] munsell_0.5.0     broom_0.5.0       crayon_1.3.4
 ```

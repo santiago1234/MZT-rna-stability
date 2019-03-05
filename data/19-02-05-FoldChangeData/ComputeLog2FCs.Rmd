@@ -26,7 +26,7 @@ The goal of this notebook is to generate the log2 Fold Change data, this data wi
 
 
 ```{r load}
-tc_alpha <- read_csv("../19-01-09-RNAseqProfilesFish/rna-seq-profiles/alpha-amanitin-prolife.csv")
+tc_alpha <- read_csv("../19-01-09-RNAseqProfilesFish/rna-seq-profiles/alpha-amanitin-prolife.csv") 
 tc_polya <- read_csv("../19-01-09-RNAseqProfilesFish/rna-seq-profiles/polyA-profile.csv")
 tc_ribo <- read_csv("../19-01-09-RNAseqProfilesFish/rna-seq-profiles/ribo-zero-profile.csv")
 ```
@@ -62,13 +62,13 @@ fc_alpha <- tc_alpha %>%
 fc_polya <- tc_polya %>% 
   mutate_if(
   is.numeric,
-  function(x) logFCnormalizer(.$s_wt_0h)(x)
+  function(x) logFCnormalizer(.$s_wt_2h)(x)
 )
 
 fc_ribo <- tc_ribo %>% 
   mutate_if(
   is.numeric,
-  function(x) logFCnormalizer(.$s_wt_0h)(x)
+  function(x) logFCnormalizer(.$s_wt_2h)(x)
 )
 
 
@@ -89,7 +89,8 @@ fc_time_course <- bind_rows(
   tidy_fc(fc_ribo, .sample_condition = "wt_ribo"),
   tidy_fc(fc_polya, .sample_condition = "wt_polya"),
   tidy_fc(fc_alpha, .sample_condition = "aamanitin_polya")
-)
+) %>% 
+  filter(time >= 2) # lower time points do not make sense
 
 ## let's plot 100 random genes
 
