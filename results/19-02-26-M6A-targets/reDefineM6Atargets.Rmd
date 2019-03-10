@@ -1,0 +1,77 @@
+---
+title: "Re-Define m6a targets"
+author: "Santiago Medina"
+date: "3/10/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+```
+
+the goal here is to re-define m6a targets that are differentialy affected in the mutant
+data.
+
+```{r m6ainmutant}
+targets <- read_csv("m6A-data/m6A_targets_tidy.csv") %>% 
+  mutate(class = "m6a")
+
+## load rna seq and estimate the log2 fold change
+
+rnaseq <- read_csv("m6A-data/m6A_time_course.csv")
+
+data <- full_join(targets, rnaseq) %>% 
+  replace_na(list(class = "no m6a"))
+
+# compute the log2 fold change between the wild type and mutant
+
+data$log2fc <- log2(data$`mzKO Y2-/- 6h` / data$`wild-type 6h_1`)
+
+## visualization
+
+data %>% 
+  ggplot(aes(`wild-type 6h_1` + 1,  `mzKO Y2-/- 6h`+ 1, color = log2fc)) +
+  geom_point(size=.5) +
+  geom_abline() +
+  scale_x_log10() +
+  scale_y_log10() +
+  facet_grid(~class) +
+  scale_color_viridis_c() +
+  labs(
+    x = "WT",
+    y = "mz mutant"
+  )
+```
+
+I will define the m6a as genes that have a positive log2 fold > 0.5 change. that means
+that they are going up in the mutant conditions.
+
+```{r truem6afoldchangemutant, fig.height=3, fig.width=2}
+data %>% 
+  ggplot(aes(x=class, y=log2fc)) +
+  geom_boxplot(outlier.shape = NA, fill="steelblue", alpha = 1/2) +
+  geom_hline(yintercept = 0.5, linetype = 3) +
+  coord_cartesian(ylim = c(-3, 3))
+```
+
+```{r}
+# save the true m6a target genes
+data %>% 
+  filter(
+    class == "m6a",
+    log2fc > 0.5
+    ) %>% 
+  select(gene_id) %>% 
+  write_csv("results_data/m6atargets_affected_in_mutant.csv")
+  
+```
+
