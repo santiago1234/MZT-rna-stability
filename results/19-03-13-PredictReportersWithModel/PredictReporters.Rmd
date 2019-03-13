@@ -1,0 +1,101 @@
+---
+title: "Predict Reporter Sequences"
+author: "Santiago Medina"
+date: "March 13, 2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggthemes)
+library(caret)
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+```{r loader}
+# load the top performing model SVM
+mdl <- read_rds("../19-01-22-PredictiveModelMrnaStability/results_data/trained_models/svmRModel.rds")
+
+# predict this reporter sequences
+reporters <- read_csv("reporters.csv") %>% 
+  mutate(Gene_ID = paste0(reporter_id, "*", optimality)) %>% 
+  select(Gene_ID, sequence)
+
+reporter_cc <- 
+  reporters %>% 
+  mutate(
+    cc = map(sequence, codonr::count_codons)
+  ) %>% 
+  unnest(cc) %>% 
+  spread(key = codon, value = n) %>% 
+  replace(., is.na(.), 0) %>% 
+  select(-sequence)
+
+
+reporter_cc$prediction <- predict(mdl, newdata = reporter_cc)
+```
+
+```{r reporterpredictions, fig.height=2, fig.width=6}
+## predict for the endogenous genes to plot in the background
+endogenous <- mdl$trainingData
+endogenous$prediction <- predict(mdl, mdl$trainingData)
+
+
+plt <- endogenous %>% 
+  ggplot(aes(prediction)) +
+  geom_density(fill="steelblue", color="white", alpha=1/4) +
+  coord_cartesian(
+    xlim = c(min(endogenous$prediction), max(endogenous$prediction))
+  )
+
+## create a column for the y-axis position of the reporters sequences
+
+ypos <- tibble(
+  reporter_id = c("cherry-P2A-293t", "cherry-P2A-fish", "embo2016-B", "embo2016-A"),
+  ypos = c(.5, 1.5, 2.5, 3.5)
+)
+
+## get the predictions and tidy for modeling
+reporter_cc <- 
+  reporter_cc %>% 
+  select(Gene_ID, prediction) %>% 
+  separate(Gene_ID, into = c("reporter_id", "optimality"), sep = "\\*") %>% 
+  inner_join(ypos)
+
+
+plt +
+  geom_point(
+    data = reporter_cc,
+    aes(x=prediction, y=ypos, color=optimality),
+    alpha=.99
+  ) +
+  geom_line(
+    data = reporter_cc,
+    aes(x=prediction, y=ypos, group=reporter_id),
+    linetype = 3
+  ) +
+  scale_color_manual(values = c("blue", "red")) +
+  ggrepel::geom_text_repel(
+    data = filter(reporter_cc, optimality == "optimal"),
+    aes(x = prediction, y = ypos, label=reporter_id),
+    size = 2.5
+  ) +
+  labs(
+    x = "predicted decay rate"
+  ) +
+  theme(
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank()
+  )
+```
+
