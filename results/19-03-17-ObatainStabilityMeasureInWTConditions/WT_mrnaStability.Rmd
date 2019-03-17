@@ -1,0 +1,208 @@
+---
+title: "Obtain Indicator of mRNA stability in WT conditions"
+author: "Santiago Medina"
+date: "3/17/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(broom)
+library(caret)
+library(ggthemes)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+## Overview
+
+The goal here is to obtain an indicator of mRNA stability in the wild type conditions. Previously I've been using the log2 fold change between 6 hrs and 2hrs. But here I fit an exponential model (linear in the log2 scale) similar to the decay model, to obtain this indicator.
+
+```{r}
+# filter the genes that are protein coding and that are expressed
+genes_to_keep <- 
+  read_csv("../19-01-18-ObtainEstimateOfCodonOptimalityPLS/results_data/pls_components_fish_genes.csv") %>% 
+  pull(Gene_ID)
+
+tc <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/RNAseq_tidytimecourse.csv") %>%
+  filter(
+    sample_condition !=  "aamanitin_polya",
+    Gene_ID %in% genes_to_keep
+  )
+```
+
+for each gene I fit the following model.
+
+$$
+logRNA = \alpha + \beta\;time
+$$
+
+The $\beta$ parameter is our stability indicator. Note that this parameter will only be meaningful for purely maternal genes since
+the zygotic expression will affect the parameter.
+
+```{r stability}
+epsilon <- 0.00001
+fits <- 
+  tc %>% 
+  mutate(
+    logTPM = log(TPM + epsilon)
+  ) %>% 
+  group_by(
+    sample_condition, Gene_ID
+  ) %>% 
+  nest() %>% 
+  mutate(
+    fit = map(data, ~lm(logTPM ~ time, data = .)),
+    tidyfit = map(fit, tidy)
+  )
+
+results <- 
+  fits %>% 
+  unnest(tidyfit) %>% 
+  filter(term == "time")
+
+
+results %>% 
+  select(sample_condition, Gene_ID, estimate) %>% 
+  spread(key = sample_condition, value = estimate) %>% 
+  ggplot(aes(x=wt_polya, y=wt_ribo)) +
+  geom_point(shape=".", color="steelblue") +
+  geom_abline(color="grey")
+```
+
+Test check
+
++ MiR-430 targets should go down
++ We should see optimality
+
+At least for the maternal genes.
+
+```{r}
+predictors <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv")
+
+dta <- inner_join(results, predictors)
+
+dta %>% 
+  ggplot(aes(estimate)) +
+  geom_density(fill="steelblue", color="steelblue") +
+  facet_grid(is_maternal ~ sample_condition) +
+  coord_cartesian(xlim = c(-1, 1))
+```
+
+```{r}
+dta %>% 
+  ggplot(aes(PLS1, estimate, color=PLS2)) +
+  geom_point(size=1/3) +
+  ggpubr::stat_cor() +
+  facet_grid(is_maternal ~ sample_condition) +
+  scale_color_viridis_c() +
+  labs(
+    y = "mRNA stability wild type"
+  )
+```
+
+### Figure 2 (Codon composition explains maternal stability)
+
+Here, I need to load the predictive model.
+
+```{r}
+
+dsub <- dta %>% 
+  filter(sample_condition == "wt_ribo", is_maternal) %>% 
+  select(-decay_rate)
+## load model
+mdl <- read_rds("../19-01-22-PredictiveModelMrnaStability/results_data/trained_models/svmRModel.rds")
+# load train and test data
+dmldat <- list.files("../19-01-22-PredictiveModelMrnaStability/results_data", pattern = "csv", full.names = T) %>% 
+  map_df(read_csv)
+
+dmldat$prediction <- predict(mdl, newdata = dmldat)
+
+dmldat <- dmldat %>% 
+  select(Gene_ID, decay_rate, prediction)
+
+# here we have the prediction
+dmldat <- inner_join(dmldat, dsub)
+
+# let's fit a linear model to account for the scale change
+fit <- lm(estimate ~ prediction, data = dmldat)
+
+dmldat$predicted_wt_stability <- predict(fit)
+```
+
+
+define 500 optimal and non optimal codons bassed on pls 1
+
+```{r fig02, fig.height=3.5, fig.width=5}
+top_nonoptimal <- dmldat %>% 
+  filter(MiR430 == 0) %>% 
+  arrange(PLS1) %>% 
+  pull(Gene_ID) %>% 
+  .[1:500]
+
+top_optimal <- dmldat %>% 
+  filter(MiR430 == 0) %>% 
+  arrange(-PLS1) %>% 
+  pull(Gene_ID) %>% 
+  .[1:500]
+
+mir430 <- filter(dmldat, MiR430 > 0) %>% .$Gene_ID
+
+genetype <- 
+  bind_rows(
+    tibble(grp = c("optimal"), Gene_ID = top_optimal),
+    tibble(grp = c("non-optimal"), Gene_ID = top_nonoptimal),
+    tibble(grp = "MiR430", Gene_ID = mir430)
+  )
+
+dplt <- dmldat %>% 
+  select(Gene_ID, predicted_wt_stability, estimate) %>% 
+  full_join(genetype) %>% 
+  replace_na(list(grp = "neutral"))
+
+
+medians <- dplt %>% 
+  group_by(grp) %>% 
+  summarise(
+    m_pred = median(predicted_wt_stability),
+    m_est = median(estimate)
+  )
+
+
+dplt %>% 
+  ggplot(aes(predicted_wt_stability, estimate, color=grp)) +
+  geom_point(size=1/2, alpha=1/2) +
+  geom_point(
+    data = medians, aes(x=m_pred, y=m_est), size=5
+  ) +
+  geom_point(
+    data = medians, aes(x=m_pred, y=m_est), size=5, shape=1, color="black"
+  ) +
+  coord_cartesian(ylim = c(-.7, .5)) +
+  geom_rangeframe(color="black") +
+  geom_abline(linetype = 3) +
+  scale_color_manual(values = c("forestgreen", "grey", "blue", "firebrick3")) +
+  labs(
+    y = "mRNA stability WT",
+    x = "predicted mRNA stability WT",
+    title = "a-amanitin model in WT conditions",
+    subtitle = str_c("R2 = ", round(summary(fit)$r.squared, 3))
+  )
+```
+
+save the stability estimate in the wild type conditions
+
+```{r}
+write_csv(results, "results_data/wt_mRNA_stability_estimate.csv")
+```
+

@@ -1,0 +1,4 @@
+figures/fig02-1.png filter=lfs diff=lfs merge=lfs -text
+figures/stability-1.png filter=lfs diff=lfs merge=lfs -text
+figures/unnamed-chunk-2-1.png filter=lfs diff=lfs merge=lfs -text
+figures/unnamed-chunk-3-1.png filter=lfs diff=lfs merge=lfs -text
