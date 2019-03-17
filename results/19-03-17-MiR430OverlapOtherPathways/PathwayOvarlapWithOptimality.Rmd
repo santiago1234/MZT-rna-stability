@@ -1,0 +1,123 @@
+---
+title: "Optimality Overlap With Other Pathways"
+author: "Santiago Medina"
+date: "March 17, 2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(gridExtra)
+library(ggthemes)
+library(ggridges)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+### Overview
+
+Do we see an overlap of codon optimality with other pathways? aka Do optimality affect MiR430 and m6A targets?Do we see an overlap of codon optimality with other pathwats?
+
+
+I will define optimal/non-optimal genes in the following way:
+
++ top 1k lowest PLS1 (non-optimal)
++ top 1k highest PLS1 (optimal)
+
+```{r getdata}
+log2fc <- read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv")
+
+# load predictors
+predictors <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  filter(is_maternal)
+
+## get the true m6a targets
+
+mym6alist <- read_csv("../19-02-26-M6A-targets/results_data/m6atargets_affected_in_mutant.csv")
+
+predictors$m6A <- predictors$Gene_ID %in% mym6alist$gene_id
+
+optimals <- tibble(
+  optimal = arrange(predictors, -PLS1)$Gene_ID[1:1000],
+  nonoptimal = arrange(predictors, PLS1)$Gene_ID[1:1000],
+) %>% 
+  gather(key = optimality, value = Gene_ID)
+
+pathwasy <- 
+  predictors %>% 
+  select(Gene_ID, m6A, MiR430) %>% 
+  left_join(optimals) %>% 
+  replace_na(list(optimality = "neutral"))
+
+dataf1 <- inner_join(log2fc, pathwasy) %>% 
+  filter(time  > 3) %>% 
+  mutate(time = paste0(time, " hrs"))
+```
+
+
+```{r 3ApathwayOverlap, fig.height=5, fig.width=4}
+dataf1 %>% 
+  filter(sample_condition == "wt_ribo") %>% 
+  mutate(MiR430 = MiR430>0) %>% 
+  select(log2FC, time, m6A, MiR430, optimality) %>% 
+  gather(key = pathway, value = present, -time, -log2FC, -optimality) %>% 
+  filter(present) %>% 
+  ggplot(aes(x=log2FC, color=optimality)) +
+  geom_rangeframe(color="black") +
+  stat_ecdf(size=1/4) +
+  facet_grid(time ~ pathway) +
+  scale_color_manual(values = c("#888888", "#6699CC", "#661100")) +
+  scale_y_continuous(breaks = c(.2, .5, .7)) +
+  coord_cartesian(xlim = c(-6, 1)) +
+  labs(
+    x = "log2 Fold Change (6hrs/2hrs)",
+    y= "Cumulative Density",
+    title = "Optimality Overlaps with other Pathways"
+  )
+```
+
+
+```{r 3bOverlapScatter, fig.height=7, fig.width=4}
+# now we do a continious version of the sample plot using PLS1
+dpb <- dataf1 %>% 
+  mutate(MiR430 = MiR430 > 0) %>% 
+  filter(sample_condition == "wt_ribo") %>% 
+  inner_join(select(predictors, Gene_ID, PLS1)) %>% 
+  mutate(
+    onlym6a = m6A & !MiR430,
+    onlyMiR430 = !m6A & MiR430,
+    m6a_and_MiR430 = m6A & MiR430,
+    no_regulation = !m6A & !MiR430
+  ) %>% 
+  select(Gene_ID, log2FC, time, PLS1:no_regulation) %>% 
+  gather(key = "pathway", value = "present", -time, -log2FC, -Gene_ID, -PLS1) %>% 
+  filter(present)
+
+
+dpb %>% 
+  filter(time > 4) %>% 
+  mutate(
+    pathway = factor(pathway, levels = c("no_regulation", "onlyMiR430", "onlym6a", "m6a_and_MiR430"))
+  ) %>% 
+  ggplot(aes(x=PLS1, y=log2FC)) +
+  geom_point(color = "grey", size = .25) +
+  geom_smooth(method = "lm", color = 'black', size = 1/2) +
+  ggpubr::stat_cor(size = 2) +
+  facet_grid(time~pathway) +
+  labs(
+    x = "codon optimality (PLS1)",
+    y = "log2 6hrs / 2 hrs"
+  ) +
+  geom_rangeframe(color = "black", alpha = 1/3)
+``` 
+
+
