@@ -1,0 +1,215 @@
+---
+title: "Evolutionary Pressure Optimality Analysis"
+author: "Santiago Medina"
+date: "3/20/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(rcartocolor)
+library(ggthemes)
+library(brms)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+**NOTE** in this case I am using the 700 list of m6A targets.
+
+```{r}
+## get the optimality
+optimality <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  select(Gene_ID, PLS1, PLS2, is_maternal, MiR430)
+
+## load the true m6a list
+m6a_targets <- read_csv("../19-02-26-M6A-targets/results_data/m6atargets_affected_in_mutant.csv")
+
+# load the mRNA stability indicator data
+stability <- read_csv("../19-03-17-ObatainStabilityMeasureInWTConditions/results_data/wt_mRNA_stability_estimate.csv") %>% 
+  select(Gene_ID, estimate)
+
+## add a classifcation in 4 grps
+dta1 <- optimality %>% 
+  mutate(
+    m6A = Gene_ID %in% m6a_targets$gene_id,
+    MiR430 = MiR430 > 0, # has MiR430?
+    only_MiR430 = MiR430 & !m6A,
+    MiR430_and_m6A = MiR430 & m6A,
+    only_m6A = !MiR430 & m6A,
+    no_target_3utr = !MiR430 & !m6A
+  ) %>% 
+  select(-MiR430, -m6A)
+
+
+```
+
+
+Now we can visualize the data
+
+```{r}
+# gather the data
+dta1 <- 
+  dta1 %>% 
+  gather(key = pathway, value = present, -PLS1, -PLS2, -Gene_ID, -is_maternal) %>% 
+  filter(present) %>% 
+  mutate(
+    pathway = factor(pathway, levels = c("no_target_3utr", "only_MiR430", "only_m6A", "MiR430_and_m6A"))
+  )
+```
+
+### The groups
+
+I define the following 3 metagroups.
+
+1. All genes: these genes were detected to be expressed at 2 hrs in the alpha-amanitin data
+2. Maternal Genes: 
+3. Maternal Genes lower unstable quartile: the 25% most unstable genes of each group
+
+```{r 4aOptimalityBoxplot}
+get_grp_lower_quantile <- function(stability) {
+  # stability is a vector with the mRNA WT stability
+  stability %>% 
+    quantile() %>% 
+    .["25%"]
+}
+
+
+g1 <- dta1 %>% 
+  mutate(
+    grp = "all genes expressed at 2hrs"
+  )
+
+g2 <- dta1 %>% 
+  filter(is_maternal) %>% 
+  mutate(
+    grp = "maternal genes"
+  )
+
+g3 <- dta1 %>% 
+  filter(is_maternal) %>% 
+  inner_join(stability) %>% 
+  group_by(pathway) %>% 
+  filter(estimate < get_grp_lower_quantile(estimate)) %>% 
+  unnest() %>% 
+  select(-estimate) %>% 
+  mutate(
+    grp = "maternal lower unstable quartile"
+  )
+
+bind_rows(g1, g2, g3) %>% 
+  ggplot(aes(
+    x = pathway,
+    y = PLS1,
+    fill = pathway
+  )) +
+  geom_boxplot(alpha=1/2, outlier.shape = NA) +
+  geom_rangeframe() +
+  facet_grid(~grp) +
+  scale_fill_carto_d() +
+  labs(
+    y = "Codon Optimality",
+    title = "Optimality Of Regulatory Pathways",
+    subtitle = "PLS1"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    strip.text.x = element_text(size = 4)
+  )
+```
+
+### Herarchical Model to estimate group means
+
+```{r 4aOptimalityStatistics}
+fit_herarchical_mdl_to_data <- function(dtagrp) {
+  ## fits the herarchical model to the data
+  ## returns a list with the brms model and the model 
+  ## estimated parameters
+  
+  brm(
+    data = dtagrp,
+    family = gaussian,
+    PLS1 ~ 1 + (1 | pathway),
+    iter = 10000, warmup = 3000, chains = 1, cores = 1 
+  )
+}
+
+get_p_val_annova_test <- function(dtagrp) {
+  # is there a difference in the group means
+  f1 <- lm(PLS1 ~ 1, data = dtagrp)
+  f2 <- lm(PLS1 ~ pathway, data = dtagrp)
+  anova(f1, f2)$`Pr(>F)`[2]
+  
+}
+
+
+extract_parameter <- function(fit) {
+  ## get the model parameters and a confidence interval
+  ## also adds the unpooled model estimate
+  fit %>% 
+    coef() %>% 
+    .$pathway %>% 
+    as_tibble(rownames = "pathway")
+  
+}
+
+fits <- bind_rows(g1, g2, g3) %>% 
+  group_by(grp) %>% 
+  nest() %>% 
+  mutate(
+    fit = map(data, fit_herarchical_mdl_to_data),
+    pvalue = map_dbl(data, get_p_val_annova_test),
+    params = map(fit, extract_parameter),
+    grp = paste0(grp, "\n p.value = ", round(pvalue, 3))
+  )
+
+## unpooled estimates
+unpooled <- fits %>% 
+  unnest(data) %>% 
+  group_by(grp, pathway) %>% 
+  summarise(unpooled_estimate = mean(PLS1))
+
+fits %>% 
+  unnest(params) %>% 
+  mutate(
+    pathway = factor(pathway, levels = c("MiR430_and_m6A", "only_m6A", "only_MiR430", "no_target_3utr"))
+  ) %>% 
+  ggplot(aes(
+    x = Estimate.Intercept,
+    y = pathway,
+    color = pathway
+  )) +
+  geom_point() +
+  geom_errorbarh(
+    aes(xmin = Q2.5.Intercept, xmax = Q97.5.Intercept),
+    height = 0.1,
+    alpha = 1/2
+  ) +
+  geom_rangeframe(color="black") +
+  geom_point(
+    data = unpooled,
+    aes(x = unpooled_estimate, y = pathway),
+    color = "black",
+    shape = 1
+  ) +
+  scale_color_carto_d() +
+  facet_grid(grp ~ .) +
+  theme(
+    strip.text.y = element_text(size = 4),
+    legend.position = "none"
+  ) +
+  labs(
+    x = "Codon Optimaity",
+    y = "3' UTR regulation",
+    title = "Mean Estimates Herarchical Model",
+    subtitle = "95% CI shown"
+  )
+```
