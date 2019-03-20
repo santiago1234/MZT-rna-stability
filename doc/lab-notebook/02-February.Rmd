@@ -160,7 +160,7 @@ knitr::include_graphics("../../results/19-02-06-DetectRegulatoryKmers/figures/02
 
 And a hetamp with the effect over time.
 
-```{r cand4, fig.cap="effect over time"}
+```{r cand4, fig.cap="effect over time", , out.width='30%'}
 knitr::include_graphics("../../results/19-02-06-DetectRegulatoryKmers/figures/02_candidates_heatmpa-1.png")
 ```
 
@@ -178,4 +178,37 @@ log_2(\text{fold change}) = \alpha + \beta_1PLS_{1i} + \beta_2PLS_{2i} +
 \sum_{i=4}^{72} \beta_i\;kmer_i + \lambda \sum_{j=1}^{72} |\beta_j|
 \end{aligned}
 $$
+
+The following plot shows the lasso coefficient path across different values for $\lambda$
+
+```{r lassopath, fig.cap="laso path, l value with best cross validation error is shown in black dotted line", out.width='70%'}
+knitr::include_graphics("../../results/19-02-12-TopKmersFeatureSelection/figures/01_lasso_path-1.png")
+```
+
+The following plot shows the coefficient for each k-mer that are non zero at the best
+$\lambda$ value.
+
+```{r coefslasso, out.width='70%'}
+knitr::include_graphics("../../results/19-02-12-TopKmersFeatureSelection/figures/01_coefs_at_six-1.png")
+```
+
+
+Ariel suggested evaluate this k-mers in the other old data sets, including the mzdicer and lna mutants.
+
+Here, I plot the k-mer effect in this data.
+
+```{r crossval, out.width='50%'}
+knitr::include_graphics("../../results/19-02-12-TopKmersFeatureSelection/figures/02_marg_efcts-1.png")
+```
+
+After this I have identified 5 potentially regulatory k-mers: 
+
+stabalizing `TCGGCG CTCCCG CCTGGG`
+destabalizing: `AGACGG, TCCGTA`
+
+Here is plot putting the elements in the same bag:
+
+```{r cumeffect}
+knitr::include_graphics("../../results/19-02-12-TopKmersFeatureSelection/figures/02_cum_effect-1.png")
+```
 

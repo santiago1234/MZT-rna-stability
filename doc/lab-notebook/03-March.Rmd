@@ -1,0 +1,31 @@
+# March
+
+```{r settings_feb, echo=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+## Evolutionary Pressure Analysis
+
+### 19-03-19
+
+The goal here is to see if the optimality (PLS1) is distributed differentially across 3' UTR
+regulatory groups (m6a, MiR-430). For this analysis, I divided the genes into 4 groups, (see boxplot) then I compare the optimality level (PLS1) across the groups.
+
+```{r 4a}
+knitr::include_graphics("../../results/19-03-20-EvolutionaryPreassure/figures/4aOptimalityBoxplot-1.png")
+```
+
+Then I fitted the following herarchical model.
+
+$$
+PLS1 \sim Normal(\mu_i, \sigma) \\
+\mu_i = \alpha_{grp_{[i]}}
+$$
+
+The following plots shows the estimate for the groups and a 95%CI, the unpooled estimate is shown (black circle). The pvalue is shown on the left, this p.value was computed with a anova test comparing against the null model (complete pooling).
+
+```{r model}
+knitr::include_graphics("../../results/19-03-20-EvolutionaryPreassure/figures/4aOptimalityStatistics-1.png")
+```
+
+
