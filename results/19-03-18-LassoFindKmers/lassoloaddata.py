@@ -1,3 +1,6 @@
+"""
+get the data to fit the lasso model
+"""
 from os import path
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -58,7 +61,7 @@ def get_folds(X, y, k=5):
     """
     yields the data folds, scaling is applied to X
     """
-    kf = KFold(n_splits=k)
+    kf = KFold(n_splits=k, random_state=42)
     for train_index, test_index in kf.split(X):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
