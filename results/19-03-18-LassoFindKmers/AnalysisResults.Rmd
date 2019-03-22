@@ -1,0 +1,176 @@
+---
+title: "Lasso Analysis To Find Regulatory K-mers in MZT"
+author: "Santiago Medina"
+date: "3/22/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(ggthemes)
+```
+
+## Overview
+
+I run a lasso analysis to find regulatory k-mer with a response variable and a set of predictors.
+
+Response: mRNA stability indicator (decay rate), this indicator was estimated with a linear model, TPM  ~ time.
+Predictors: 2 PLSs optimality components and all the possible 6-mers.
+
+This analysis is run 4 times:
+
++ all maternal genes (~4k) for the Ribo0 and PolyA data sets.
++ all maternal genes and no MiR-430 6-mer sits (~3k) for he Ribo0 and PolyA data sets.
+
+In each of the cases above, we performed 6-Kfold validation to obtain reliable estimates.
+
+The output of this analysis if a regularization path (with the LASSO) and the cross-validation for each fold to detect the best $\lambda$ parameter that maximizes the R2 score.
+
+
+## Lasso Paths
+
+```{r lassopaths, fig.height=6, fig.width=8}
+lasso_paths <- read_csv("results_data/lasso_paths.csv")
+
+lasso_paths <- lasso_paths %>% 
+  rename(vars = X1) %>% 
+  gather(alpha, coef,-vars, -kfold, -sample_condition, -which_genes) %>% 
+  mutate(alpha = as.numeric(alpha))
+
+coef_type <- function(vname) {
+  if (vname == "PLS1") return("PLS1")
+  if (vname == "PLS2") return("PLS2")
+  if (vname == "GCACTT") return("MiR-430")
+  else return("k-mer")
+}
+
+lasso_paths <- lasso_paths %>% 
+  mutate(vartype = map_chr(vars, coef_type))
+
+lasso_paths %>% 
+  filter(kfold == 1) %>% 
+  ggplot(aes(x=alpha, y=coef, color=vartype, group=vars)) +
+  geom_line(aes(size=vartype)) +
+  scale_x_log10() +
+  geom_hline(yintercept = 0, linetype=3) +
+  scale_size_manual(values = c(1/25, 1, 1, 1/2)) +
+  scale_color_colorblind() +
+  facet_grid(sample_condition ~ which_genes)
+
+```
+
+## Best $\lambda$
+
+```{r best_lambda, fig.height=6, fig.width=7}
+cval <- read_csv("results_data/lasso_cross_val_params.csv")
+cval %>% 
+  filter(mean_test_score > -.10) %>% 
+  ggplot(aes(x=param_alpha, y=mean_test_score * 100, color=which_genes)) +
+  geom_point() +
+  geom_smooth() +
+  scale_x_log10() +
+  facet_grid(~sample_condition)
+```
+
+For each $\lambda$ in the plot above we have six points coming from the 6s fold in CV.
+Now let's get the best lambda value for each case.
+
+
+```{r}
+# get the best lambda value by taking the median across cases
+best_lambda <- 
+  cval %>% 
+  group_by(
+    param_alpha, which_genes, sample_condition
+  ) %>% 
+  summarise(
+    mean_test_score = median(mean_test_score)
+  ) %>% 
+  ungroup() %>% 
+  group_by(sample_condition, which_genes) %>% 
+  nest() %>% 
+  mutate(best_l = map(data, function(x) arrange(x, -mean_test_score) %>% slice(1:1))) %>% 
+  unnest(best_l) %>% 
+  select(-data)
+
+knitr::kable(best_lambda)
+```
+
+```{r}
+# get the coefs for thos lambdas
+results <- best_lambda %>% 
+  inner_join(lasso_paths, by = c("sample_condition", "which_genes")) %>% 
+  filter(alpha == param_alpha)
+
+# check elements that pass the filter -------------------------------------
+# the filter is that for each case, in the the fold the coefficient should
+# not be zero
+
+candidates <- 
+  results %>% 
+  group_by(sample_condition, which_genes, vars) %>% 
+  nest() %>% 
+  mutate(
+    passesfilter = map_lgl(data, function(df) all((abs(df$coef) > 0)))
+  ) %>% 
+  filter(passesfilter)
+
+# now get the median for each variable
+candidates <- 
+  candidates %>% 
+  select(-passesfilter) %>% 
+  unnest() %>% 
+  ungroup() %>% 
+  group_by(sample_condition, which_genes, vars) %>% 
+  summarise(effect = median(coef)) %>% 
+  ungroup()
+
+```
+
+```{r candidates, fig.height=7, fig.width=3}
+# rank base on mean effect across conditions ------------------------------
+ranking <- 
+  candidates %>% 
+  group_by(vars) %>% 
+  summarise(me = median(effect)) %>% 
+  arrange(me) %>% 
+  pull(vars)
+
+candidates$vars <- factor(candidates$vars, levels = ranking)
+  
+candidates %>% 
+  mutate(
+    ef = sign(effect),
+    ef = map_chr(ef, ~if_else(. == 1, "stabalizing", "destabalizing")),
+    ef = factor(ef, levels = c("stabalizing", "destabalizing"))
+  ) %>% 
+  ggplot(aes(x=which_genes, y=vars, fill=effect)) +
+  geom_tile() +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  facet_grid(ef~sample_condition, scales = "free_y", space = "free_y") +
+  scale_fill_viridis_c() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(
+    y = NULL,
+    x = NULL,
+    title = "Candidates LASO analysis"
+  )
+```
+
+**NOTE**: If a k-mer is not significant for the condition in the heatmap above there is not color.
+
+```{r}
+# save results
+write_csv(candidates, "results_data/candidate_elements_laso_analysis.csv")
+```
+
