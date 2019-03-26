@@ -1,6 +1,5 @@
 from mztrnastabilitty.utils import find_stop_codon
 
-
 def test_find_stop_codon():
     s1 = "ATGC"
     s2 = "acgTTTtag"

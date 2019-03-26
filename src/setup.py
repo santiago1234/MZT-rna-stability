@@ -6,7 +6,7 @@ def readme():
     return f.read()
 
 
-setup(name='mztrnastabilitty/',
+setup(name='mztrnastabilitty',
       version='0.1',
       description='Python Code for the project 190108-mzt-rna-stability',
       long_description=readme(),
