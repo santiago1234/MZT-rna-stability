@@ -13,6 +13,7 @@ knitr::opts_chunk$set(
 
 library(tidyverse)
 library(ggrepel)
+library(ggridges)
 library(gridExtra)
 theme_set(theme_light())
 ```
@@ -117,5 +118,27 @@ p2 <- dtidy %>%
   scale_fill_viridis_c()
 
 grid.arrange(p1, p2, nrow = 2)
+```
+
+## poly/ribo over time
+
+```{r polyOverRiboRatio, fig.width=4, fig.height=5}
+dtidy %>% 
+  filter(condition != "polyA_aamanitin") %>% 
+  spread(key = condition, value = TPM) %>% 
+  group_by(Gene_ID) %>% 
+  mutate(log2fc = log2(polyA_wt / ribo_wt)) %>% 
+  filter(!is.na(log2fc), !is.infinite(log2fc)) %>% 
+  ggplot(aes(x = log2fc, y = as.character(time), fill = ..x..)) +
+  geom_density_ridges_gradient(color="white") +
+  geom_vline(xintercept = 0, linetype=3) +
+  scale_fill_viridis_c(name = "log2 fc\n poly/ribo", option = "C") +
+  coord_cartesian(xlim = c(-5, 4)) +
+  theme_classic() +
+  labs(
+    y = "time hrs.",
+    x = "log2 fold change",
+    title = "poly/ribo"
+  )
 ```
 

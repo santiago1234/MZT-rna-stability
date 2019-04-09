@@ -16,3 +16,8 @@ Bivariate distributions
 -----------------------
 
 ![](./figures/bivariate_polyA-1.png)
+
+poly/ribo over time
+-------------------
+
+![](./figures/polyOverRiboRatio-1.png)
