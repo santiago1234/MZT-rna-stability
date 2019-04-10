@@ -7,6 +7,11 @@ output:
     keep_md: true
 ---
 
+### Overview
+
+Generate log2 fold change data $X/3hrs$. I always normalize the data with 3 hrs.
+According to an analysis this is the ideal time point.
+
 
 
 The goal of this notebook is to generate the log2 Fold Change data, this data will be usefull in other analysis.

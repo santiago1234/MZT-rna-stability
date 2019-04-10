@@ -7,6 +7,11 @@ output:
     keep_md: true
 ---
 
+### Overview
+
+Generate log2 fold change data $X/3hrs$. I always normalize the data with 3 hrs.
+According to an analysis this is the ideal time point.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(
@@ -56,19 +61,19 @@ if (test_check) stop("you did something wrong")
 fc_alpha <- tc_alpha %>% 
   mutate_if(
   .predicate = is.numeric,
-  .funs = function(x) logFCnormalizer(.$s_alpha_2h)(x)
+  .funs = function(x) logFCnormalizer(.$s_alpha_3h)(x)
 )
 
 fc_polya <- tc_polya %>% 
   mutate_if(
   is.numeric,
-  function(x) logFCnormalizer(.$s_wt_2h)(x)
+  function(x) logFCnormalizer(.$s_wt_3h)(x)
 )
 
 fc_ribo <- tc_ribo %>% 
   mutate_if(
   is.numeric,
-  function(x) logFCnormalizer(.$s_wt_2h)(x)
+  function(x) logFCnormalizer(.$s_wt_3h)(x)
 )
 
 
@@ -90,7 +95,7 @@ fc_time_course <- bind_rows(
   tidy_fc(fc_polya, .sample_condition = "wt_polya"),
   tidy_fc(fc_alpha, .sample_condition = "aamanitin_polya")
 ) %>% 
-  filter(time >= 2) # lower time points do not make sense
+  filter(time >= 3) # lower time points do not make sense
 
 ## let's plot 100 random genes
 
