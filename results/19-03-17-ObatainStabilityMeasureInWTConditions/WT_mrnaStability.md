@@ -11,7 +11,7 @@ output:
 
 ## Overview
 
-The goal here is to obtain an indicator of mRNA stability in the wild type conditions. Previously I've been using the log2 fold change between 6 hrs and 2hrs. But here I fit an exponential model (linear in the log2 scale) similar to the decay model, to obtain this indicator.
+The goal here is to obtain an indicator of mRNA stability in the wild type conditions. Previously I've been using the log2 fold change between 6 hrs and 2hrs. But here I fit an exponential model (linear in the log2 scale) similar to the decay model, to obtain this indicator, I only use the time points 3, 4, 5, 6 , 7, 8.
 
 
 

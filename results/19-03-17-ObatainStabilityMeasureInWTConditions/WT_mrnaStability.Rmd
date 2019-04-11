@@ -26,7 +26,7 @@ theme_set(theme_tufte(base_family = "Helvetica"))
 
 ## Overview
 
-The goal here is to obtain an indicator of mRNA stability in the wild type conditions. Previously I've been using the log2 fold change between 6 hrs and 2hrs. But here I fit an exponential model (linear in the log2 scale) similar to the decay model, to obtain this indicator.
+The goal here is to obtain an indicator of mRNA stability in the wild type conditions. Previously I've been using the log2 fold change between 6 hrs and 2hrs. But here I fit an exponential model (linear in the log2 scale) similar to the decay model, to obtain this indicator, I only use the time points 3, 4, 5, 6 , 7, 8.
 
 ```{r}
 # filter the genes that are protein coding and that are expressed
@@ -37,7 +37,8 @@ genes_to_keep <-
 tc <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/RNAseq_tidytimecourse.csv") %>%
   filter(
     sample_condition !=  "aamanitin_polya",
-    Gene_ID %in% genes_to_keep
+    Gene_ID %in% genes_to_keep,
+    time >= 3
   )
 ```
 
