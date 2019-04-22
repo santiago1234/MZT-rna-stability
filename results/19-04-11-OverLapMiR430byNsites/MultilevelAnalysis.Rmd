@@ -1,0 +1,181 @@
+---
+title: "Overlap MiR-430 by Number of 6-mer sites"
+author: "Santiago Medina"
+date: "4/11/2019"
+output:
+   html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300
+  )
+library(tidyverse)
+library(brms)
+library(ggridges)
+library(ggthemes)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+
+Here, I check the effect of codon optimality (PLS1) in miR-430 targets.
+
+The question is: Do we see an optimality effect in MiR-430 targets genes?
+
+Approach:
+
+I will split MiR-430 targets in 4 categories: 0 sites, 1 site, 2 sites and 3 or more sites.
+
+The response variable is the log2 fold change (X / 3) hrs. 
+
+I have the conditions a-amanitin, polyA and ribo 0.
+
+To access the effect of codon optimality in each of the groups. I fitted the following Hierarchical Model.
+
+Optimality is PLS1 (partial least squares compenent 1).
+
+$$
+\begin{aligned}
+y &\sim Normal(\mu_i, \sigma_i) \\
+\mu_i &= A_i +  B_i * \text{PLS1}\\
+A_i &= \alpha + \alpha_{time} + \alpha_{mir} + \alpha_{condition} \\
+B_i &= \beta + \beta_{time} + \beta_{mir} + \beta_{condition}
+\end{aligned}
+$$
+
+### Posterior summary
+
+```{r}
+fit <- read_rds("results_data/multilevel_mdl.rds")
+
+psamples <- 
+  posterior_samples(fit) %>% 
+  as_tibble()
+
+b_effects <- 
+  psamples %>% 
+  select(contains("PLS1")) %>% 
+  select(-contains("sd_"), -contains("cor")) %>% 
+  transmute(
+    # effect at 4 hrs
+    # aamanitin
+    t4_0sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_1sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_2sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_3.or.moresites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[4,PLS1]`,
+    # ribo0
+    t4_0sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_1sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_2sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_3.or.moresites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[4,PLS1]`,
+    # polyA
+    t4_0sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_1sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_2sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[4,PLS1]`,
+    t4_3.or.moresites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[4,PLS1]`,
+    
+    # effect at 5 hrs
+    t5_0sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_1sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_2sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_3.or.moresites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[5,PLS1]`,
+    # ribo0
+    t5_0sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_1sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_2sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_3.or.moresites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[5,PLS1]`,
+    # polyA
+    t5_0sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_1sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_2sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[5,PLS1]`,
+    t5_3.or.moresites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[5,PLS1]`,
+    
+    # effect at 6 hrs
+    t6_0sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_1sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_2sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_3.or.moresites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[6,PLS1]`,
+    # ribo0
+    t6_0sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_1sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_2sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_3.or.moresites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[6,PLS1]`,
+    # polyA
+    t6_0sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_1sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_2sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[6,PLS1]`,
+    t6_3.or.moresites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[6,PLS1]`,
+    
+    # effect at 7 hrs
+    t7_0sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_1sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_2sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_3.or.moresites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[7,PLS1]`,
+    # ribo0
+    t7_0sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_1sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_2sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_3.or.moresites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[7,PLS1]`,
+    # polyA
+    t7_0sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_1sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_2sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[7,PLS1]`,
+    t7_3.or.moresites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[7,PLS1]`,
+    
+    # effect at 8 hrs
+    t8_0sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_1sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_2sites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_3.or.moresites_aamanitin = b_PLS1 + `r_sample_condition[aamanitin_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[8,PLS1]`,
+    # ribo0
+    t8_0sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_1sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_2sites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_3.or.moresites_ribo0 = b_PLS1 + `r_sample_condition[wt_ribo,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[8,PLS1]`,
+    # polyA
+    t8_0sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[0.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_1sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[1.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_2sites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[2.sites,PLS1]` + `r_time[8,PLS1]`,
+    t8_3.or.moresites_polya = b_PLS1 + `r_sample_condition[wt_polya,PLS1]` + `r_MiR430[3.or.more.sites,PLS1]` + `r_time[8,PLS1]`
+  )
+
+
+# tidy data sets ----------------------------------------------------------
+
+b_effects <- 
+  b_effects %>% 
+  gather(key = sample, value = posterior) %>% 
+  separate(col = sample, into = c("time", "miR430 sites", "condition"), sep = "_") %>% 
+  mutate(
+    time = str_replace(time, "t", "") %>% as.numeric(),
+    `miR430 sites` = factor(`miR430 sites`, levels = c("0sites", "1sites", "2sites", "3.or.moresites")),
+    condition = factor(condition, levels = c("aamanitin", "ribo0", "polya"))
+  )
+
+```
+
+
+```{r mir430optimalityEffect, fig.height=7, fig.width=5}
+b_effects %>% 
+  filter(time > 4) %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(x=posterior, y=time, fill=condition, color=condition)) +
+  geom_vline(xintercept = c(0, .10, .2), alpha=1/3) +
+  geom_density_ridges(scale = 1, alpha=2/3,bandwidth=0.00217) +
+  scale_fill_colorblind() +
+  geom_rangeframe() +
+  scale_color_colorblind() +
+  facet_grid(`miR430 sites`~.) +
+  labs(
+    x = "posterior samples (effect)",
+    y = "time",
+    title = "Effect of codon optimality (PLS1) in log2 fc"
+  )
+
+```
+
+
