@@ -1,0 +1,152 @@
+---
+title: "Exploratory Analysis"
+author: "Santiago Medina"
+date: "4/30/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+## Overview
+
+Here, Before evaluation machine learning models, I will explore the data set. That
+we are using. The decay rate may be in different scales hence I will scale it according to the data it was originated. Also
+here I will add some new features (3' utr length, cds length)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggridges)
+library(rsample)
+
+theme_set(theme_light())
+```
+
+***
+
+## remove outliers
+
+I will drop the outliers since they can affect the predictive models.
+
+```{r datawithoutliers, fig.height=4, fig.width=6}
+data <- read_csv("../../../data/19-04-29-AllDecayProfiles/decay_profiles_and_seqdata.csv")
+data %>% 
+  mutate(id = paste(specie, cell_type, datatype, sep = " | ")) %>% 
+  ggplot(aes(y=decay_rate, x=id)) +
+  geom_boxplot(fill='grey', outlier.alpha = 1/5) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(x=NULL)
+```
+
+
+```{r datanooutliers, fig.height=4, fig.width=6}
+drop_outliers <- function(grp) {
+  # get the outliers bassed on IQR statistic
+  outliers <- boxplot.stats(grp$decay_rate)$out
+  
+  # drop the outliers
+  grp[!grp$decay_rate %in% outliers, ]
+}
+
+data_no_outliers <- 
+  data %>% 
+  group_by(specie, cell_type, datatype) %>% 
+  nest() %>% 
+  mutate(no_outliers = map(data, drop_outliers)) %>% 
+  unnest(no_outliers)
+
+data_no_outliers %>% 
+  mutate(id = paste(specie, cell_type, datatype, sep = " | ")) %>% 
+  ggplot(aes(y=decay_rate, x=id)) +
+  geom_boxplot(fill='grey', outlier.alpha = 1/5) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(x=NULL)
+```
+
+***
+
+### Scale Decay Rate
+
+```{r decay}
+data_no_outliers %>%
+  mutate(id = paste(specie, cell_type, datatype, sep = " | ")) %>% 
+  ggplot(aes(decay_rate, id)) +
+  geom_density_ridges(color=NA, fill="steelblue", alpha=2/3) +
+  labs(title = "decay rate")
+```
+
+It is easy to check that the data comes in different scales, also there are outliers present in the data.
+
+I will save a data with the mean and variance of each data set, this can be used later in case I need
+to convert the data back to the original scale.
+
+```{r decayscaled}
+sumary_mean_std <- 
+  data_no_outliers %>% 
+  group_by(specie, cell_type, datatype) %>% 
+  summarise(
+    mean_decayrate = mean(decay_rate),
+    stdeviation_decayrate = sd(decay_rate)
+  )
+
+## save stats
+write_csv(sumary_mean_std, "results_data/mean_std_of_decayrates_for_each_DataSet.csv")
+
+## scale the data
+
+data_scaled_and_no_outliers <- 
+  data_no_outliers %>% 
+  group_by(specie, cell_type, datatype) %>% 
+  mutate(decay_rate = as.vector(scale(decay_rate))) %>% 
+  ungroup()
+
+# repeat the plot above  
+
+data_scaled_and_no_outliers %>%
+  mutate(id = paste(specie, cell_type, datatype, sep = " | ")) %>% 
+  ggplot(aes(decay_rate, id)) +
+  geom_density_ridges(color=NA, fill="steelblue", alpha=2/3) +
+  labs(title = "decay rate (scaled) & no outliers")
+```
+
+***
+
+### Add features: cds length and 3utr length
+
+I will add the length of the cds and also the length of the 3' UTR. After this, I will drop the 3utr.
+
+```{r}
+maindata <- 
+  data_scaled_and_no_outliers %>% 
+  mutate(
+    utrlenlog = log(str_length(`3utr`) + 1),
+    cdslenlog = log(str_length(coding) + 1),
+  ) %>% 
+  select(-`3utr`)
+```
+
+
+### Validation Set
+
+Now, I will define a validation set that will be only used for evaluating the predictive models.
+
+
+
+```{r}
+set.seed(1234)
+dsplit <- initial_split(data = maindata, prop = 9/10, strata = "specie")
+d_train <- training(dsplit)
+d_test <- testing(dsplit)
+
+## save
+
+write_csv(d_train, "results_data/training_set.csv")
+write_csv(d_test, "results_data/validation_set.csv")
+```
