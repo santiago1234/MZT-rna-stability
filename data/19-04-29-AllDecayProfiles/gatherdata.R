@@ -64,14 +64,14 @@ slammouse <-
 # Wu et al 2019 -----------------------------------------------------------
 # decay profiles
 
-humanprofiles <- read_csv("../../../../180815-orfome/data/human_profiles_decay_rate.csv") %>% 
+humanprofiles <- read_csv("../../../180815-orfome/data/human_profiles_decay_rate.csv") %>% 
   dplyr::select(Name, datatype, cell_type, decay_rate) %>% 
   mutate(specie = "human") %>% 
   rename(gene_id = Name)
 
 # fish Gopal profiles -----------------------------------------------------
 
-fish_new <- read_csv("../../../results/19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv") %>% 
+fish_new <- read_csv("../../results/19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv") %>% 
   filter(term == "beta") %>% 
   dplyr::select(Gene_ID, estimate) %>% 
   mutate(
@@ -165,7 +165,11 @@ human_orfs <- get_seq_data("hsapiens_gene_ensembl",
 # get orf cds sequences
 orf_orfs <- readxl::read_excel("orf-data/TRC3_puro_customer informatics lot 11241401MN.xlsx") %>% 
   dplyr::select(DNA_Barcode, ORF_Sequence, `3_Flank`) %>% 
-  filter(DNA_Barcode != "n/a") %>% 
+  filter(
+    DNA_Barcode != "n/a",
+    (str_length(ORF_Sequence) %% 3) == 0
+    ) %>% 
+  
   rename(ensembl_gene_id = DNA_Barcode, coding = ORF_Sequence, `3utr` = `3_Flank`)
 
 # bind data ---------------------------------------------------------------
