@@ -21,8 +21,13 @@ here I will add some new features (3' utr length, cds length)
 
 I will drop the outliers since they can affect the predictive models.
 
+I wont use the orf-ome for model training. It will be drop it.
+
 ![](./figures/datawithoutliers-1.png)<!-- -->
 
+## Does decay rate shows correlation bewtween cell types?
+
+![](./figures/unnamed-chunk-1-1.png)<!-- -->
 
 ![](./figures/datanooutliers-1.png)<!-- -->
 
@@ -44,6 +49,7 @@ to convert the data back to the original scale.
 ### Add features: cds length and 3utr length
 
 I will add the length of the cds and also the length of the 3' UTR. After this, I will drop the 3utr.
+
 
 
 

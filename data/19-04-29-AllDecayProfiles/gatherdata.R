@@ -74,11 +74,12 @@ humanprofiles <- read_csv("../../../180815-orfome/data/human_profiles_decay_rate
 hela_decay <- readxl::read_xlsx("Wu et al_decay_rates.xlsx", sheet = 2)
 rpe_decay <-  readxl::read_xlsx("Wu et al_decay_rates.xlsx", sheet = 3)
 
+# NOTE: decay_rate has the opposite sign in these 2 cell types
 rpe_and_hela <- bind_rows(
   hela_decay,
   rpe_decay
 ) %>% 
-  mutate(specie = "human") %>% 
+  mutate(specie = "human", decay_rate = decay_rate * -1) %>% 
   rename(gene_id = Name)
 
 ## add data to the other profiles

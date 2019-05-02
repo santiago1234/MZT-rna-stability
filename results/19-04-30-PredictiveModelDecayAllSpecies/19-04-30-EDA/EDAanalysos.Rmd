@@ -35,8 +35,12 @@ theme_set(theme_light())
 
 I will drop the outliers since they can affect the predictive models.
 
+I wont use the orf-ome for model training. It will be drop it.
+
 ```{r datawithoutliers, fig.height=4, fig.width=6}
-data <- read_csv("../../../data/19-04-29-AllDecayProfiles/decay_profiles_and_seqdata.csv")
+data <- read_csv("../../../data/19-04-29-AllDecayProfiles/decay_profiles_and_seqdata.csv") %>% 
+  filter(datatype != "orf-ome")
+
 data %>% 
   mutate(id = paste(specie, cell_type, datatype, sep = " | ")) %>% 
   ggplot(aes(y=decay_rate, x=id)) +
@@ -45,6 +49,18 @@ data %>%
   labs(x=NULL)
 ```
 
+## Does decay rate shows correlation bewtween cell types?
+
+```{r}
+data %>% 
+  filter(cell_type %in% c("293t", "hela")) %>% 
+  select(gene_id, datatype, cell_type, decay_rate) %>% 
+  spread(key = cell_type, value = decay_rate) %>% 
+  ggplot(aes(x=`293t`, y=hela)) +
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  ggpubr::stat_cor()
+```
 
 ```{r datanooutliers, fig.height=4, fig.width=6}
 drop_outliers <- function(grp) {
@@ -121,6 +137,7 @@ data_scaled_and_no_outliers %>%
 ### Add features: cds length and 3utr length
 
 I will add the length of the cds and also the length of the 3' UTR. After this, I will drop the 3utr.
+
 
 ```{r}
 maindata <- 

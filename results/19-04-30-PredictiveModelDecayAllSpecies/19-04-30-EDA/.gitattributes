@@ -2,3 +2,8 @@ figures/datanooutliers-1.png filter=lfs diff=lfs merge=lfs -text
 figures/datawithoutliers-1.png filter=lfs diff=lfs merge=lfs -text
 figures/decay-1.png filter=lfs diff=lfs merge=lfs -text
 figures/decayscaled-1.png filter=lfs diff=lfs merge=lfs -text
+figures/datanooutliers-1.png filter=lfs diff=lfs merge=lfs -text
+figures/datawithoutliers-1.png filter=lfs diff=lfs merge=lfs -text
+figures/decay-1.png filter=lfs diff=lfs merge=lfs -text
+figures/decayscaled-1.png filter=lfs diff=lfs merge=lfs -text
+figures/unnamed-chunk-1-1.png filter=lfs diff=lfs merge=lfs -text
