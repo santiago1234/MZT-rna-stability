@@ -69,6 +69,21 @@ humanprofiles <- read_csv("../../../180815-orfome/data/human_profiles_decay_rate
   mutate(specie = "human") %>% 
   rename(gene_id = Name)
 
+## add RPE and HELA data
+
+hela_decay <- readxl::read_xlsx("Wu et al_decay_rates.xlsx", sheet = 2)
+rpe_decay <-  readxl::read_xlsx("Wu et al_decay_rates.xlsx", sheet = 3)
+
+rpe_and_hela <- bind_rows(
+  hela_decay,
+  rpe_decay
+) %>% 
+  mutate(specie = "human") %>% 
+  rename(gene_id = Name)
+
+## add data to the other profiles
+humanprofiles <- bind_rows(humanprofiles, rpe_and_hela)
+
 # fish Gopal profiles -----------------------------------------------------
 
 fish_new <- read_csv("../../results/19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv") %>% 
@@ -169,7 +184,6 @@ orf_orfs <- readxl::read_excel("orf-data/TRC3_puro_customer informatics lot 1124
     DNA_Barcode != "n/a",
     (str_length(ORF_Sequence) %% 3) == 0
     ) %>% 
-  
   rename(ensembl_gene_id = DNA_Barcode, coding = ORF_Sequence, `3utr` = `3_Flank`)
 
 # bind data ---------------------------------------------------------------
