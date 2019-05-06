@@ -53,7 +53,7 @@ endogenous$prediction <- predict(mdl, mdl$trainingData)
 
 plt <- endogenous %>% 
   ggplot(aes(prediction)) +
-  geom_density(fill="steelblue", color="white", alpha=1/4) +
+  geom_density(fill="steelblue", color=NA, alpha=1/4) +
   coord_cartesian(
     xlim = c(min(endogenous$prediction), max(endogenous$prediction))
   )
@@ -73,16 +73,17 @@ reporter_cc <-
   inner_join(ypos)
 
 
+
 plt +
+  geom_line(
+    data = reporter_cc,
+    aes(x=prediction, y=ypos, group=reporter_id),
+    linetype = 1, alpha=2/3
+  ) +
   geom_point(
     data = reporter_cc,
     aes(x=prediction, y=ypos, color=optimality),
     alpha=.99
-  ) +
-  geom_line(
-    data = reporter_cc,
-    aes(x=prediction, y=ypos, group=reporter_id),
-    linetype = 3
   ) +
   scale_color_manual(values = c("blue", "red")) +
   ggrepel::geom_text_repel(

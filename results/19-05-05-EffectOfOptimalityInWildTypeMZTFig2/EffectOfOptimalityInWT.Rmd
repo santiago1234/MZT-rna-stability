@@ -1,0 +1,145 @@
+---
+title: "Evaluatio the Model in WT (MZT) conditions"
+author: "Santiago Medina"
+date: "5/5/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggthemes)
+library(caret)
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+This analysis is done for mainly maternal genes.
+
+## The data sets
+1. Model Predictions
+2. log2FC data
+3. Optimality (PLS1 or categories from Ariel's embo2016)
+4. MiR-430 sites
+
+## 1. Model Predictions Bassed on the Codon Compositio
+
+```{r}
+genes_to_predict <- bind_rows(
+  read_csv("../19-01-22-PredictiveModelMrnaStability/results_data/test_data.csv"),
+  read_csv("../19-01-22-PredictiveModelMrnaStability/results_data/train_data.csv")
+)
+
+mdl <- read_rds("../19-01-22-PredictiveModelMrnaStability/results_data/trained_models/svmRModel.rds")
+
+genes_to_predict$predictedDecay <- predict(mdl, newdata = genes_to_predict)
+
+# subset the important columns
+stabCodons <- 
+  genes_to_predict %>% 
+  select(Gene_ID, predictedDecay)
+```
+
+
+## 2. Log Fold Change Data
+```{r}
+log2data <- read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv")
+```
+
+## 3. Optimality AND MIR-430 data
+
+```{r}
+programs <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  filter(is_maternal == TRUE) %>% 
+  select(Gene_ID, m6A, MiR430, PLS1, PLS2)
+
+
+## define the top 500 optimal and non-optimal genes
+
+top_optimal <- 
+  programs %>% 
+  filter(MiR430 == 0) %>% 
+  arrange(-PLS1) %>%
+  pull(Gene_ID) %>% 
+  .[1:500]
+
+top_nonoptimal <- 
+  programs %>% 
+  filter(MiR430 == 0) %>% 
+  arrange(PLS1) %>%
+  pull(Gene_ID) %>% 
+  .[1:500]
+
+mir430 <- programs %>% filter(MiR430 > 0) %>% pull(Gene_ID)
+optimalityclass <- bind_rows(
+  tibble(Gene_ID = top_optimal, class = "optimal"),
+  tibble(Gene_ID = top_nonoptimal, class = "non-optimal"),
+  tibble(Gene_ID = mir430, class = "MiR-430")
+)
+
+programs <- left_join(programs, optimalityclass) %>% 
+  replace_na(list(class="neutral"))
+```
+## Fig 2
+
+```{r fig02, fig.height=2.5, fig.width=7}
+data <- inner_join(programs, stabCodons) %>% 
+  inner_join(log2data)
+
+
+# show the median values
+medians <- data %>% 
+  filter(time == 6) %>% 
+  group_by(sample_condition, class) %>% 
+  summarise(m_predictedDecay = mean(predictedDecay), m_log2FC = mean(log2FC))
+
+
+## filter non-mir 430 genes
+
+data %>% 
+  filter(time == 6, MiR430 == 0) %>% 
+  ggplot(aes(x=predictedDecay, y=log2FC, color=class)) +
+  geom_point(alpha=3/5, shape=16, size=1) +
+  geom_point(data = filter(medians, class != "MiR-430"), aes(x=m_predictedDecay, y=m_log2FC), size=3.5, shape=16, color="black", alpha=.95) +
+  geom_point(data = filter(medians, class != "MiR-430"), aes(x=m_predictedDecay, y=m_log2FC), size=3, shape=16, alpha=.95) +
+  ggpubr::stat_cor(color="black", size=2.5) +
+  geom_rangeframe(color="black") +
+  scale_color_manual(values = c("grey", "blue", "red")) +
+  facet_grid(~sample_condition) +
+  labs(
+    title = "all maternal genes (MiR-430 targets not shown)",
+    x = "predicted mRNA stability bassed on codon composition",
+    y = "log 2 fol change WT\n(6hrs / 3hrs)"
+  ) +
+  coord_cartesian(xlim = c(-.45, .2), ylim = c(-7, 5.5)) 
+```
+
+```{r fig02aAllGenes, fig.height=2.5, fig.width=7}
+data %>% 
+  filter(time == 6) %>% 
+  ggplot(aes(x=predictedDecay, y=log2FC, color=class)) +
+  geom_point(alpha=3/5, shape=16, size=1) +
+  geom_point(data = medians, aes(x=m_predictedDecay, y=m_log2FC), size=3.5, shape=16, color="black", alpha=.95) +
+  geom_point(data = medians, aes(x=m_predictedDecay, y=m_log2FC), size=3, shape=16, alpha=.95) +
+  ggpubr::stat_cor(color="black", size=2.5) +
+  geom_rangeframe(color="black") +
+  scale_color_manual(values = c("forestgreen", "grey", "blue", "red")) +
+  facet_grid(~sample_condition) +
+  labs(
+    title = "all maternal genes ~5K",
+    x = "predicted mRNA stability bassed on codon composition",
+    y = "log 2 fol change WT\n(6hrs / 3hrs)"
+  )
+```
+
+
+
+
