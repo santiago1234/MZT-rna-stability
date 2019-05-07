@@ -1,0 +1,173 @@
+---
+title: "Which Pathway is the Strongest Predictor?"
+author: "Santiago Medina"
+date: "4/10/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(brms)
+library(ggthemes)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+We use a linear model with a response distributed according to the student distribution.
+
+```{r}
+predictors <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  filter(is_maternal) %>% 
+  select(Gene_ID, m6A, MiR430, PLS1:PLS2)
+
+## use GC content
+orfs <- read_csv("../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/fish_seq_data_cds_3utr.csv")
+predictors <- 
+  orfs %>% 
+  mutate(
+    utrloglen = log(str_length(`3utr`) + 1)
+  ) %>% 
+  select(ensembl_gene_id, utrloglen) %>% 
+  rename(Gene_ID = ensembl_gene_id) %>% 
+  inner_join(predictors)
+
+true_m6A <- read_csv("../19-02-26-M6A-targets/results_data/m6atargets_affected_in_mutant.csv")
+predictors$my_m6a_targets <- predictors$Gene_ID %in% true_m6A$gene_id
+
+# load log2 fold change data
+# X/3hrs
+log2fc <- read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv") %>% 
+  filter(time %% 1 == 0, time > 3) %>% 
+  filter(!is.na(log2FC), !is.infinite(log2FC))
+
+dta <- inner_join(predictors, log2fc)
+```
+
+## EDA analysis
+
+```{r}
+dta %>% 
+  sample_n(10000) %>% 
+  ggplot(aes(log2FC, color=time, group=time)) +
+  geom_density() +
+  facet_grid(.~sample_condition) +
+  labs(title = "log2fc X / 3")
+```
+
+```{r}
+dta %>% 
+  sample_n(10000) %>% 
+  ggplot(aes(x=PLS1, y=log2FC)) +
+  geom_point() +
+  facet_grid(time ~ sample_condition, scale="free_y") +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_cor()
+```
+
+### FIT MODELS
+
+```{r}
+get_mdl_weights_loo <- function(dta) {
+  x <- dta
+  # model formulas
+  fmlnull <- bf(log2FC ~ 1)
+  fml0 <- bf(log2FC ~ utrloglen)
+  fml1 <- bf(log2FC ~ PLS1 + PLS2)
+  fml2 <- bf(log2FC ~ my_m6a_targets)
+  fml3 <- bf(log2FC ~ MiR430)
+  
+  fitnull <- brm(fmlnull, data = x, family = student(), chains = 1)
+  fit0 <- brm(fml0, data = x, family = student(), chains = 1)
+  fit1 <- brm(fml1, data = x, family = student(), chains = 1)
+  fit2 <- brm(fml2, data = x, family = student(), chains = 1)
+  fit3 <- brm(fml3, data = x, family = student(), chains = 1)
+  
+  loonull <- loo(fitnull)
+  loo0 <- loo(fit0)
+  loo1 <- loo(fit1)
+  loo2 <- loo(fit2)
+  loo3 <- loo(fit3)
+  
+  loo_list <- list(null=loonull, utrloglen=loo0,optimality=loo1, m6A=loo2, miR430=loo3)
+  results <- loo_model_weights(loo_list)
+  
+  tibble(
+    model = names(results),
+    weights = as.vector(results)
+  )
+  
+  
+}
+```
+
+
+```{r}
+results <- dta %>% 
+  group_by(sample_condition, time) %>% 
+  nest() %>% 
+  mutate(mw = map(data, get_mdl_weights_loo))
+```
+
+
+```{r mdlsweights, fig.height=3, fig.width=5}
+
+mw <-  unnest(results, mw)
+mw %>%
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(x=as.character(time), y=weights, fill=model)) +
+  geom_bar(stat = "identity", width = 1, color="black") +
+  geom_hline(yintercept = 0.5, linetype=3) +
+  scale_fill_colorblind() +
+  facet_grid(.~sample_condition) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_x_discrete(expand = c(0, 0)) +
+  theme_tufte() +
+  theme(axis.text.x =  element_text(angle = 60, hjust = 1)) +
+  labs(
+    title = "Model Weights (LOO)",
+    x = "time (hrs)"
+  )
+```
+
+```{r modelComparison, fig.height=8, fig.width=6}
+# get the potentiall number of genes regulated by each pathway
+results2 <- 
+  dta %>% 
+  filter(time == 4, sample_condition == "wt_ribo") %>% 
+  transmute(
+    miR430 = MiR430 >0, null = FALSE,
+    utrloglen = TRUE, optimality = TRUE,
+    m6A = my_m6a_targets
+  ) %>% 
+  gather(key = "model") %>% 
+  group_by(model) %>% 
+  summarise(n_genes = sum(value)) %>% 
+  ungroup() %>% 
+  inner_join(mw)
+
+results2 %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(y=weights, x=n_genes, color=model)) +
+  geom_point(shape=16, alpha=.9) +
+  geom_rangeframe(color="black") +
+  ggrepel::geom_text_repel(aes(label=model), size=3) +
+  facet_grid(time~sample_condition) +
+  scale_color_colorblind() +
+  scale_y_continuous(breaks = c(0, .5, 1)) +
+  scale_x_continuous(breaks = c(0, 2000, 4000), labels = c("0K", "2K", "4K")) +
+  labs(
+    x = "# of genes potentially regulated by pathway",
+    y = "model weight\n(weighting with the Bayesian bootstrap)"
+  ) +
+  theme(legend.position = "none")
+```
+
