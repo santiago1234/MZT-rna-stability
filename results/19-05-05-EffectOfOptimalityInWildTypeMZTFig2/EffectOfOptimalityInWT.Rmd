@@ -137,6 +137,68 @@ data %>%
   )
 ```
 
+## Residual Plots To show MiR-430 are over-estimated
+
+To get the residual I will fit a linear model:
+
+$$
+log2fc\text{(Xhrs / 3hrs)} = \alpha + \beta\;\hat{y}
+$$
+Where $\hat{y}$ is the predicted stability bassed on the codon composition. The linear model is to 
+bassically put the predictions in the same scale as the log2FC.
 
 
+```{r residuals_M6A, fig.height=5, fig.width=3.5}
+preds <- 
+  data %>% 
+  filter(time > 4) %>% 
+  filter(!is.infinite(log2FC)) %>% 
+  group_by(sample_condition, time) %>% 
+  nest() %>% 
+  mutate(
+    fit = map(data, ~lm(log2FC ~ predictedDecay, data = .)),
+    preds = map(fit, broom::augment)
+  ) %>% 
+  unnest(preds) %>% 
+  inner_join(data, by=c("time", "sample_condition", "log2FC", "predictedDecay"))
+
+
+preds %>% 
+  filter(time %% 1 == 0, time < 8) %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(x=m6A, y=.resid, fill = m6A)) +
+  geom_boxplot(outlier.shape = NA, size = 1/3) +
+  geom_rangeframe(alpha=1/3) +
+  facet_grid(time~sample_condition) +
+  scale_fill_manual(values = c("grey", "steelblue")) +
+  scale_x_discrete(labels=c("no targets", "m6A targets")) +
+  scale_y_continuous(breaks = c(-3, 0, 3)) +
+  coord_cartesian(ylim = c(-6, 4)) +
+  labs(
+    x = NULL,
+    y = "residual\n(observed - predicted)",
+    subtitle = "Model Overestimates m6A targets in WT"
+  ) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+
+```{r residuals_MiR430, fig.height=5, fig.width=4}
+preds %>% 
+  filter(time %% 1 == 0, time < 8, MiR430 < 5) %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(x=MiR430, y=.resid, group=MiR430, fill = as.character(MiR430))) +
+  geom_boxplot(outlier.shape = NA, size = 1/3) +
+  geom_rangeframe(alpha=1/3) +
+  facet_grid(time~sample_condition) +
+  scale_y_continuous(breaks = c(-3, 0, 3)) +
+  scale_fill_manual(values = c("grey", "#074050", "#105965", "#217a79", "#4c9b82")) +
+  coord_cartesian(ylim = c(-6, 4)) +
+  labs(
+    x = "# sites with MiR-430 seed",
+    y = "residual\n(observed - predicted)",
+    subtitle = "Model Overestimates MiR-430 targets in WT"
+  ) +
+  theme(legend.position = "none")
+```
 
