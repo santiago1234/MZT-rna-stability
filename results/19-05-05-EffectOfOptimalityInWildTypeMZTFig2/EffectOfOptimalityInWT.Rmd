@@ -102,24 +102,21 @@ medians <- data %>%
   summarise(m_predictedDecay = mean(predictedDecay), m_log2FC = mean(log2FC))
 
 
-## filter non-mir 430 genes
-
 data %>% 
-  filter(time == 6, MiR430 == 0) %>% 
+  filter(time == 6) %>% 
   ggplot(aes(x=predictedDecay, y=log2FC, color=class)) +
   geom_point(alpha=3/5, shape=16, size=1) +
-  geom_point(data = filter(medians, class != "MiR-430"), aes(x=m_predictedDecay, y=m_log2FC), size=3.5, shape=16, color="black", alpha=.95) +
-  geom_point(data = filter(medians, class != "MiR-430"), aes(x=m_predictedDecay, y=m_log2FC), size=3, shape=16, alpha=.95) +
+  geom_point(data = medians, aes(x=m_predictedDecay, y=m_log2FC), size=3.5, shape=16, color="black", alpha=.95) +
+  geom_point(data = medians, aes(x=m_predictedDecay, y=m_log2FC), size=3, shape=16, alpha=.95) +
   ggpubr::stat_cor(color="black", size=2.5) +
   geom_rangeframe(color="black") +
-  scale_color_manual(values = c("grey", "blue", "red")) +
+  scale_color_manual(values = c(NA, "grey", "blue", "red")) +
   facet_grid(~sample_condition) +
   labs(
-    title = "all maternal genes (MiR-430 targets not shown)",
+    title = "all maternal genes ~5K (miR-430 not shown)",
     x = "predicted mRNA stability bassed on codon composition",
     y = "log 2 fol change WT\n(6hrs / 3hrs)"
-  ) +
-  coord_cartesian(xlim = c(-.45, .2), ylim = c(-7, 5.5)) 
+  )
 ```
 
 ```{r fig02aAllGenes, fig.height=2.5, fig.width=7}
