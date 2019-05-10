@@ -1,0 +1,174 @@
+---
+title: "Overlap MiR-430"
+author: "Santiago Medina"
+date: "5/6/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+## Overview
+
+Take the predicted mRNA stability bassed on the codonn composition as your estimate of mRNA stability.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggthemes)
+library(gridExtra)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+```{r}
+genes_to_predict <- bind_rows(
+  read_csv("../19-01-22-PredictiveModelMrnaStability/results_data/test_data.csv"),
+  read_csv("../19-01-22-PredictiveModelMrnaStability/results_data/train_data.csv")
+)
+mdl <- read_rds("../19-01-22-PredictiveModelMrnaStability/results_data/trained_models/svmRModel.rds")
+genes_to_predict$predictedDecay <- predict(mdl, newdata = genes_to_predict)
+# subset the important columns
+stability_codons <- 
+  genes_to_predict %>% 
+  select(Gene_ID, predictedDecay)
+```
+
+## load targets
+
+```{r}
+programs <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  filter(is_maternal == TRUE) %>% 
+  select(Gene_ID, m6A, MiR430, PLS1, PLS2)
+```
+
+Tidy the data to make gene groups.
+
+
+```{r}
+mir430codes <- read_csv("../../data/19-01-17-EMBO2016DATA/datasets/Groups/mir430_genes_targets.csv") %>% 
+  rename(Gene_ID = gene_id)
+
+ma <- tibble(
+  Gene_ID = mir430codes %>% filter(MicroArray != "No") %>% pull(Gene_ID),
+  class = "miR-430 ma"
+)
+
+all_mir430 <- tibble(
+  Gene_ID = programs %>% filter(MiR430 > 0) %>% pull(Gene_ID),
+  class = "all mir-430 (6-mers)"
+)
+
+m6A <- tibble(
+  Gene_ID = programs %>% filter(m6A == TRUE) %>% pull(Gene_ID),
+  class = "m6A"
+)
+
+all_genes <- tibble(
+  Gene_ID = stability_codons$Gene_ID,
+  class = "all genes"
+)
+
+classes <- bind_rows(
+  ma,
+  all_mir430,
+  m6A,
+  all_genes
+) %>% 
+  mutate(class = factor(
+    class,
+    levels = c("all genes", "all mir-430 (6-mers)", "miR-430 ma", "m6A")
+    )
+  )
+
+## join with the predicted stability bassed on the codons
+
+dtapreds <- inner_join(classes, stability_codons)
+dtapreds <- 
+  dtapreds %>% 
+  group_by(class) %>% 
+  mutate(optimality = ntile(predictedDecay, n = 5))
+
+
+# load response data ------------------------------------------------------
+
+log2fc <- 
+  read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv") %>% 
+  filter(time > 4, is_maternal == TRUE)
+
+alldat <- inner_join(dtapreds, log2fc)
+
+
+```
+
+```{r fig03OVerlap, fig.height=6, fig.width=12}
+p2 <- alldat %>% 
+  filter(sample_condition == "wt_ribo") %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(x=predictedDecay, y=log2FC)) +
+  geom_point(shape=16, size=1, alpha=1/3, color = "grey") +
+  facet_grid(time~class) +
+  geom_rangeframe(color="black", alpha=1/4) +
+  geom_smooth(method = MASS::rlm, color="black", size=1/3) +
+  ggpubr::stat_cor(size=1.8) +
+  scale_x_continuous(breaks = c(-.3, 0,.2)) +
+  scale_y_continuous(breaks = c(-4, 0, 4)) +
+  theme(
+    strip.text.x = element_text(size = 5)
+  ) +
+  labs(
+    title = "WT log2 Fold Change",
+    subtitle = "(X / 3hrs) ribo 0 data",
+    x = "predicted stability bassed on codon composition"
+  )
+
+
+p1 <- alldat %>% 
+  filter(time == 6) %>% 
+  ggplot(aes(x=optimality, y=log2FC, group=optimality, fill=optimality)) +
+  geom_boxplot(outlier.shape = NA, size=1/4) +
+  geom_rangeframe(color="black", alpha=1/4) +
+  scale_fill_gradient2(low="blue", high = "red", mid = "grey", midpoint = 3) +
+  facet_grid(sample_condition~class, scales = "free_y") +
+  coord_cartesian(ylim = c(-5, 3)) +
+  labs(
+    x = "quantiles\n(predicted stability bassed on codon composition)",
+    y = "log2 fold change\n(6hrs / 3hrs)"
+  ) +
+  theme(
+    strip.text.x = element_text(size = 5),
+    legend.position = "none"
+  )
+
+grid.arrange(p1, p2, nrow = 1)
+
+```
+
+## box plot PolyA and Ribo at 5 hours
+
+```{r polyRiboOveralpOptimalityMir430at5hrs, fig.height=3, fig.width=4}
+alldat %>% 
+  filter(time == 5, sample_condition != "aamanitin_polya") %>% 
+  ggplot(aes(x=optimality, y=log2FC, group=optimality, fill=optimality)) +
+  geom_boxplot(outlier.shape = NA, size=1/6) +
+  geom_rangeframe(color="black", alpha=1/4) +
+  scale_fill_gradient2(low="blue", high = "red", mid = "grey", midpoint = 3) +
+  facet_grid(sample_condition~class, scales = "free_y") +
+  coord_cartesian(ylim = c(-3.5, 2)) +
+  labs(
+    x = "5-tiles\n(predicted stability bassed on codon composition)",
+    y = "log2 fold change\n(5hrs / 3hrs)"
+  ) +
+  theme(
+    strip.text.x = element_text(size = 5),
+    legend.position = "none"
+  )
+```
+
