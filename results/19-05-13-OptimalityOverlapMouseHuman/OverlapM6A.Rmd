@@ -1,0 +1,110 @@
+---
+title: "Overlap Optimality with m6A human"
+author: "Santiago Medina"
+date: "5/13/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggthemes)
+library(gridExtra)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+
+```
+
+## the data
+
+```{r}
+pls_and_decay <- read_csv("results_data/pls_components_human.csv")
+
+# m6a targets
+
+m6Agenes <- read_csv("results_data/mmc5.csv") %>% 
+  filter(Region == "3' UTR") %>% 
+  pull(Gene) %>% 
+  unique()
+  
+mappings <- read_csv("results_data/mappings_ensemble_id_to_gene_names.csv")
+
+
+m6a_targets <- mappings %>% 
+  mutate(m6a = Name %in% m6Agenes) %>% 
+  filter(m6a) %>% 
+  pull(gene_id)
+
+humandata <- read_csv("results_data/pls_components_human.csv") %>% 
+  mutate(m6A = gene_id %in% m6a_targets)
+```
+
+## m6a targets
+
+can we see m6A effect?
+
+```{r}
+humandata %>% 
+  mutate(id = paste0(cell_type, " | ", datatype)) %>% 
+  ggplot(aes(x=m6A, y=decay_rate)) +
+  geom_boxplot(fill = "grey", outlier.shape = ".") +
+  facet_grid(~id) +
+  coord_cartesian(ylim = c(-.5, .5)) +
+  labs(
+    title = "m6A target genes"
+  )
+```
+
+
+```{r ovarlapHumanOptimalityM6a, fig.width=5.5, fig.height=8}
+humandata <- 
+  humandata %>% 
+  mutate(
+    gene_grp = map_chr(m6A, ~if_else(., "m6A targets", "no targets")),
+    gene_grp = factor(gene_grp, levels = c("no targets", "m6A targets")),
+    id = paste0(cell_type, " | ", datatype)
+  ) %>% 
+  group_by(datatype, cell_type, gene_grp) %>% 
+  mutate(optimality = ntile(PLS1, n = 5))
+
+p1 <- humandata %>% 
+  ggplot(aes(x=optimality, y=decay_rate, group=optimality, fill=optimality))  +
+  geom_boxplot(outlier.shape = NA, size=1/4) +
+  geom_rangeframe(color="black", alpha=1/4) +
+  scale_fill_gradient2(low="blue", high = "red", mid = "grey", midpoint = 3) +
+  facet_grid(id ~ gene_grp, scales = "free_y") +
+  coord_cartesian(ylim = c(-.3, .3)) +
+  labs(
+    x = "quantiles\n(optimality PLS1)",
+    y = "decay rate\n(Wu et al. 2019)"
+  ) +
+  theme(
+    strip.text.x = element_text(size = 5),
+    legend.position = "none"
+  )
+
+p2 <- humandata %>% 
+  ggplot(aes(PLS1, decay_rate)) +
+  geom_point(shape=16, alpha=.1, color="grey") +
+  geom_smooth(method = "lm", color  = "black") +
+  ggpubr::stat_cor(size = 1) +
+  facet_grid(id ~ gene_grp, scales = "free_y") +
+  labs(
+    x = "optimality PLS1",
+    y = "decay rate\n(Wu et al. 2019)"
+  ) +
+  geom_rangeframe(color="black", alpha = 1/4)
+
+
+grid.arrange(p1, p2, nrow = 1)
+```
+
