@@ -44,6 +44,11 @@ to convert the data back to the original scale.
 
 ![](./figures/decayscaled-1.png)<!-- -->
 
+### number of data points
+
+![](./figures/npoints-1.png)<!-- -->
+
+
 ***
 
 ### Add features: cds length and 3utr length

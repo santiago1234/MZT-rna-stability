@@ -25,8 +25,9 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(ggridges)
 library(rsample)
+library(ggthemes)
 
-theme_set(theme_light())
+theme_set(theme_tufte(base_family = 'Helvetica'))
 ```
 
 ***
@@ -103,7 +104,7 @@ It is easy to check that the data comes in different scales, also there are outl
 I will save a data with the mean and variance of each data set, this can be used later in case I need
 to convert the data back to the original scale.
 
-```{r decayscaled}
+```{r decayscaled, fig.height=4, fig.width=5}
 sumary_mean_std <- 
   data_no_outliers %>% 
   group_by(specie, cell_type, datatype) %>% 
@@ -128,9 +129,31 @@ data_scaled_and_no_outliers <-
 data_scaled_and_no_outliers %>%
   mutate(id = paste(specie, cell_type, datatype, sep = " | ")) %>% 
   ggplot(aes(decay_rate, id)) +
-  geom_density_ridges(color=NA, fill="steelblue", alpha=2/3) +
-  labs(title = "decay rate (scaled) & no outliers")
+  geom_density_ridges(fill="grey", alpha=2/3) +
+  labs(
+    title = "decay rate distribution",
+    y = NULL,
+    x = "scaled decay rate"
+  )
 ```
+
+### number of data points
+
+```{r npoints, fig.height=2, fig.width=5}
+data_scaled_and_no_outliers %>% 
+  mutate(id = paste(specie, cell_type, datatype, sep = " | ")) %>% 
+  group_by(id) %>% 
+  summarise(n=n()) %>% 
+  ggplot(aes(x=n, y=id)) +
+  geom_point(shape=16, alpha=.9) +
+  geom_errorbarh(aes(xmin=0, xmax=n), height=0) +
+  labs(
+    x = 'number of data points',
+    y = NULL
+  )
+
+```
+
 
 ***
 
