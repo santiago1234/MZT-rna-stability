@@ -1,0 +1,217 @@
+---
+title: "Tunning Machine Learning Models (Results)"
+author: "Santiago Medina"
+date: "5/8/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+Here, I show the results of the machine learning tuning process.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggthemes)
+library(gridExtra)
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+## Cross Validation Profiles For Tunned Models
+
+```{r cross_val_models}
+
+cval_res <- 
+  list.files("results_data/", pattern = "^cv*", full.names = T) %>% 
+  map_df(read_csv)
+
+mean_r2 <- cval_res %>% 
+  group_by(mdlname) %>% 
+  summarise(r2_mean = mean(r2_score), maxr2 = max(r2_score)) %>% 
+  mutate(r2 = paste0("r2 = ", round(r2_mean, 3)))
+
+cval_res %>% 
+  ggplot(aes(x = reorder(mdlname, r2_score, mean), y = r2_score)) +
+  #geom_jitter(color="grey") +
+  geom_tufteboxplot() +
+  geom_rug(sides="b") +
+  annotate(
+    geom = "text",
+    x = "gbm", y = 0.43,
+    label = paste0("r2 = ", round(max(mean_r2$r2_mean), 3)),
+    size = 2
+  ) +
+  coord_flip() +
+  labs(
+    x = NULL,
+    title = "10-Fold Cross Validation",
+    subtitle = "hold out test set score",
+    y = "r2 score"
+  )
+```
+
+## Diagnostics plots for top 3 models
+
+```{r diagnosticsGBM, fig.height=2.5, fig.width=4.5}
+preds_res <- 
+  list.files("results_data/", pattern = "^val_*", full.names = T) %>% 
+  map_df(read_csv) %>% 
+  mutate(id = paste(specie, cell_type, datatype, sep = " | "))
+
+p_pred <- preds_res %>% 
+  filter(mdlname == "gbm") %>% 
+  ggplot(aes(x = predicted, y = observed)) +
+  geom_point(shape=16, size=1, alpha=1/10) +
+  geom_abline(linetype = 2) +
+  ggpubr::stat_cor(size=2) +
+  geom_rangeframe()
+
+
+p_res <- preds_res %>% 
+  filter(mdlname == "gbm") %>% 
+  ggplot(aes(x = predicted, y = predicted - observed)) +
+  geom_point(shape=16, size=1, alpha=1/5) +
+  geom_abline(linetype = 2, slope = 0) +
+  labs(
+    y = "residual"
+  ) +
+  geom_rangeframe()
+
+grid.arrange(p_pred, p_res, nrow=1, top="Gradient boosting model\ntest data")
+```
+
+Observation: It seems that is more difficult to predict unstable genes than stable genes. This is good in the case that we 
+want to optimize proteins since the accuracy is better for more stable genes.
+
+## Prediction Across Species and Data Sets
+
+```{r bydataset, fig.height=1.5, fig.width=10}
+preds_res %>% 
+  filter(mdlname == "gbm") %>% 
+  ggplot(aes(x = predicted, y = observed)) +
+  geom_point(shape=16, alpha=1/4, size=1/2) +
+  geom_abline(linetype=2, size=1/4) +
+  facet_grid(~id) +
+  scale_x_continuous(breaks = c(-1.5, 0, 1.5)) +
+  scale_y_continuous(breaks = c(-2, 0, 2)) +
+  ggpubr::stat_cor(size=1.5) +
+  theme(strip.text.x = element_text(size = 4.5))
+
+```
+
+## Reporter Sequences Predictions
+
+```{r reporters_preds, fig.height=3.5, fig.width=6}
+dta <- read_csv("results_data/reporters_pr") %>% 
+  mutate(id = paste(specie, cell_type, datatype, sep = " | "))
+
+reporters <- 
+  dta %>% 
+  filter(str_detect(gene_id, "\\|")) %>% 
+  separate(gene_id, into = c("reporter_name", "optimality"), sep = "\\|")
+
+
+# add random coodinates for plot
+reporters <- 
+  tibble(
+  reporter_name = unique(reporters$reporter_name),
+  positin_y = c(0.05, 0.3, 0.7, 1)
+) %>% 
+  inner_join(reporters)
+
+# add a distance (aka fold change)
+reporters <- 
+  reporters %>% 
+  spread(key = optimality, value = predicted) %>% 
+  mutate(diff = optimal - `non-optimal`) %>% 
+  gather(key = optimality, value = predicted,
+         -reporter_name, -positin_y, -cell_type, -datatype, -specie,
+         -observed, -id, -diff)
+
+# get the reporter name to add as label just to one facet
+
+repname <- reporters %>% 
+  filter(
+    id == "fish | embryo mzt | aamanitin polya",
+    optimality == "optimal"
+  )
+
+
+dta %>% 
+  ggplot(aes(predicted)) +
+  geom_density(fill="grey", color=NA, alpha=1/2) +
+  geom_line(
+    data = reporters,
+    aes(
+      x = predicted,
+      y = positin_y,
+      group = reporter_name
+    ),
+    color = "black",
+    size = 1/5
+  ) +
+  geom_point(
+    data = reporters,
+    aes(
+      x = predicted,
+      y = positin_y,
+      color = optimality
+    ),
+    shape = 16,
+    alpha = .99
+  ) +
+  geom_text(
+    data = repname,
+    aes(x=predicted + 0.3, y=positin_y + .3, label=reporter_name),
+    size = 1.8, alpha=.7
+  ) +
+  scale_color_manual(values = c("blue", "red")) +
+  facet_wrap(id ~ .) +
+  coord_cartesian(ylim = c(0, 1.7), xlim = c(-1.5, 1)) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+  ) +
+  labs(
+    y = NULL,
+    x = "predicted mRNA stability\n(distribution of test data shown in background)",
+    title = "Prediction of Reporter Sequences",
+    subtitle = "GBM model"
+  )
+
+```
+
+
+## Learning Curves
+
+```{r learningcurve, fig.width=2, fig.height=2} 
+curve <- read_csv("results_data/learning_curve.csv")
+
+curve %>% 
+  ggplot(aes(x=train_sizes, y=test_scores_mean)) +
+  geom_point(shape=16, alpha=3/4) +
+  geom_line() +
+  geom_line(aes(y=test_scores_std + test_scores_mean), linetype=2) +
+  geom_line(aes(y= -test_scores_std + test_scores_mean), linetype=2) +
+  geom_rangeframe() +
+  scale_x_continuous(labels = scales::unit_format(unit = "k", scale = 1e-3, digits = 2)) +
+  labs(
+    y = "Cross Validation R2 score",
+    x = "Training Examples",
+    title = "Learning Curve",
+    subtitle = "(Gradient Boosting)"
+  )
+```
+
