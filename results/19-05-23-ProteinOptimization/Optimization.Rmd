@@ -1,0 +1,92 @@
+---
+title: "Optimizing mRNA stability by codon optimality"
+author: "Santiago Medina"
+date: "5/23/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(ggthemes)
+
+theme_set(theme_tufte(base_family = 'Helvetica'))
+```
+
+## Overview
+
+TODO: description
+
+## Approach
+
+## Results
+
+```{r neutraloptimized ,fig.height=3, fig.width=5}
+results <- read_csv("results_data/search.csv")
+
+results %>% 
+  filter(gene == "neutral human gene ENSG00000126214") %>% 
+  ggplot(aes(x=iteration, y=fitness, color=fitness)) +
+  geom_rangeframe(color="black") +
+  geom_point(shape='.', position = "jitter") +
+  scale_color_viridis_c("predited\nmRNA stability", option = "C") +
+  labs(title="protein optimization")
+
+```
+
+## Results Across Species
+
+```{r optimized, fig.height=12, fig.width=12}
+dta1 <- results %>% 
+  mutate(gene = str_replace(gene, "(neutral |stable |unstable )", "")) %>% 
+  select(-sequences, -fitness) %>% 
+  gather(key = condition, value = fitness, -gene, -optimization, -iteration)
+
+
+startingvals <- dta1 %>% 
+  filter(iteration == 0) %>% 
+  group_by(gene, condition) %>% 
+  summarise(start_fitness = median(fitness))
+
+
+maximals <- 
+  dta1 %>% 
+  group_by(condition, gene, iteration) %>% 
+  summarise(
+    min_opt = min(fitness),
+    max_opt = max(fitness)
+  )
+
+
+dta1 %>% 
+  ggplot(aes(x=iteration, y=fitness, color=fitness)) +
+  geom_point(position = 'jitter', shape='.') +
+  geom_hline(yintercept = 0, linetype=3) +
+  geom_point(
+    data = startingvals,
+    aes(x=.5, y=start_fitness),
+    color = "black",
+    shape=16,
+    size=3
+  ) +
+  geom_line(data = maximals, aes(x=iteration, y=min_opt), color="black", size=1/7) +
+  geom_line(data = maximals, aes(x=iteration, y=max_opt), color="black", size=1/7) +
+  #scale_color_gradient2(low = 'darkblue', high = 'firebrick2', mid = 'grey99', midpoint = 0) +
+  scale_color_viridis_c("predited\nmRNA stability", option = "C") +
+  geom_rangeframe(color="black") +
+  facet_grid(condition ~ gene) +
+  scale_x_continuous(breaks = c(1, 100, 200)) +
+  coord_cartesian(ylim = c(-2.5, 2)) +
+  labs(
+    title = "genetic algorithm search"
+  )
+
+```
+
+
