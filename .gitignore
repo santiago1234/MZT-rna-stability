@@ -42,6 +42,9 @@ vignettes/*.pdf
 # ignore .csv files
 *.csv
 
+# txt files
+*.txt
+
 # ignore execel files
 *.xlsx
 *.xls
