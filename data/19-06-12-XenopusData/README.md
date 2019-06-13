@@ -1,6 +1,6 @@
 ## Expression Data *Owens et al., 2016, Cell Reports*
 
-get the data
+get the data. I obtained the gene quantifications for clutch A (polya and ribo)
 
 ```bash
 wget ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE65nnn/GSE65785/suppl/GSE65785_clutchApolyA_absolute_TPE_gene_isoform.txt.gz
@@ -17,5 +17,7 @@ the sequence data was obtained from biomart website
 fasta_to_tab -in martquery_0613173836_403.txt >xenopus_3utr.txt
 fasta_to_tab -in martquery_0613173535_586.txt >xenopus_coding.txt
 ```
+
+The codon optimality for xenopus genes was estimated bassed on Z. fish using the projections of the PLS components.
 
 
