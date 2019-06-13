@@ -1,0 +1,75 @@
+---
+title: "Xenopus Overlap"
+author: "Santiago Medina"
+date: "6/13/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(tidyverse)
+```
+
+```{r}
+expressio <- read_csv("../../data/19-06-12-XenopusData/time_course_xenopus.csv")
+pathways <- read_csv("../../data/19-06-12-XenopusData/regulatory_pathways_xenopus.csv")
+```
+
+## compute log2 fc 
+
+```{r}
+dataset <- expressio %>% 
+  rename(Gene_ID = ensembl_gene_id) %>% 
+  filter(
+    time %in% c(2, 6)
+  ) %>% 
+  spread(key = time, value = expression_quantification) %>% 
+  mutate(
+    log2FC = log2(`6` / (`2` + 0.00001))
+  ) %>% 
+  left_join(pathways)
+
+```
+
+## MiR-430 regulation in Xenopus?
+
+```{r}
+dataset %>% 
+  filter(!is.na(MiR430), in_top_4k_expressed_at_0hrs) %>% 
+  ggplot(aes(x=MiR430, y=log2FC, group=MiR430)) +
+  geom_boxplot() +
+  labs(x="miR-430 sites", y = "log2 (6/2)hrs") +
+  facet_grid(sample_condition~.)
+
+```
+
+```{r}
+dataset %>% 
+  filter(!is.na(MiR430), in_top_4k_expressed_at_0hrs) %>% 
+  filter(MiR430 < 4) %>% 
+  ggplot(aes(PLS1, log2FC)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_cor() +
+  facet_grid(sample_condition~MiR430) +
+  labs(title = "top 4K genes expressed at 0hrs") +
+  labs(title = "overlap optimality")
+
+```
+
+
+```{r}
+dataset %>% 
+  filter(!is.na(MiR430), in_top_4k_expressed_at_0hrs, sample_condition == "wt_polya") %>% 
+  group_by(MiR430 > 0) %>% 
+  mutate(optimality = ntile(PLS1, 5)) %>% 
+  ggplot(aes(x=optimality, y=log2FC, group=optimality)) +
+  geom_boxplot() +
+  facet_grid(~MiR430>0)
+
+
+dataset %>% 
+  filter(!is.na(MiR430), in_top_4k_expressed_at_0hrs, sample_condition == "wt_polya") %>% 
+  write_csv("results_data/xenopus_verlap_data.csv")
+```
+
