@@ -2,7 +2,9 @@
 title: "EDA RNA-seq time courses"
 author: "Santiago Medina"
 date: "1/10/2019"
-output: github_document
+output: 
+  html_document:
+    keep_md: true
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +17,10 @@ library(tidyverse)
 library(ggrepel)
 library(ggridges)
 library(gridExtra)
-theme_set(theme_light())
+library(ggthemes)
+library(scales)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
 ```
 
 In this notebook I will visualize the time-course RNA-seq data.
@@ -54,12 +59,14 @@ visualize_pca_decomposition <- function(data, title = NULL) {
       ) %>% 
     ggplot(aes(x = PC1, y = PC2, label = time, color = time)) +
     geom_text_repel() +
-    geom_point() +
+    geom_point(shape=16, alpha=.8) +
     labs(
       x = str_c("PC1, ", pca_var_per[1], "%"),
       y = str_c("PC2, ", pca_var_per[2], "%"),
       title = title
-    )
+    ) +
+    geom_rangeframe(color="black") +
+    theme(legend.position = "none")
   
 }
 
@@ -74,7 +81,7 @@ The PCA analysis looks find!
 
 ## Bivariate distributions
 
-```{r  bivariate_polyA, fig.height=4, fig.width=10}
+```{r  bivariate_polyA, fig.height=3.5, fig.width=7}
 tidy_data <- function(data, var_id) {
   data %>% 
     select(-Name) %>% 
@@ -91,54 +98,67 @@ dtidy <- bind_rows(
   tidy_data(ribo_wt, "ribo_wt")
 )
 
-p1 <- dtidy %>% 
+d_ribo <- dtidy %>% 
   filter(condition != "polyA_aamanitin") %>% 
+  select(-sample_id) %>% 
   filter(time %% 1 == 0) %>% 
   spread(key = condition, value = TPM) %>% 
-  ggplot(aes(x = polyA_wt, y = ribo_wt)) +
-  geom_hex() +
-  facet_grid(~time) +
-  scale_x_log10() +
-  scale_y_log10() +
-  theme(axis.text.x = element_blank()) +
-  scale_fill_viridis_c()
+  mutate(sample = "WT ribo") %>% 
+  drop_na() %>% 
+  rename(expression_wt = ribo_wt)
 
-p2 <- dtidy %>% 
+d_poly <- dtidy %>% 
   filter(condition != "ribo_wt") %>% 
   select(-sample_id) %>% 
   filter(time %% 1 == 0) %>% 
   spread(key = condition, value = TPM) %>% 
+  mutate(sample = "a-amanitin") %>% 
   drop_na() %>% 
-  ggplot(aes(x = polyA_wt, y = polyA_aamanitin)) +
-  geom_hex() +
-  facet_grid(~time) +
-  scale_x_log10() +
-  scale_y_log10() +
-  theme(axis.text.x = element_blank()) +
-  scale_fill_viridis_c()
+  rename(expression_wt = polyA_aamanitin)
 
-grid.arrange(p1, p2, nrow = 2)
+tc_d <- bind_rows(d_poly, d_ribo)
+
+
+tc_d %>% 
+  filter(expression_wt > 0, polyA_wt > 0, time >=2, time <= 7) %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(y = expression_wt, x = polyA_wt)) +
+  geom_hex() +
+  scale_y_continuous(trans = log2_trans(),
+                     breaks = trans_breaks("log2", function(x) 2^x),
+                     labels = trans_format("log2", math_format(2^.x))) +
+  scale_x_continuous(trans = log2_trans(),
+                     breaks = trans_breaks("log2", function(x) 2^x),
+                     labels = trans_format("log2", math_format(2^.x))) +
+  facet_grid(sample ~ time) +
+  scale_fill_viridis_c(option = "A") +
+  labs(
+    y = "poly-A WT",
+    x = "expression",
+    title = "RNA-seq time course dynamics during MZT"
+  )
+
 ```
 
 ## poly/ribo over time
 
-```{r polyOverRiboRatio, fig.width=4, fig.height=5}
+```{r polyOverRiboRatio, fig.width=2, fig.height=2}
 dtidy %>% 
-  filter(condition != "polyA_aamanitin") %>% 
+  filter(condition != "polyA_aamanitin", time %% 2 == 0) %>% 
   spread(key = condition, value = TPM) %>% 
   group_by(Gene_ID) %>% 
   mutate(log2fc = log2(polyA_wt / ribo_wt)) %>% 
   filter(!is.na(log2fc), !is.infinite(log2fc)) %>% 
   ggplot(aes(x = log2fc, y = as.character(time), fill = ..x..)) +
   geom_density_ridges_gradient(color="white") +
-  geom_vline(xintercept = 0, linetype=3) +
-  scale_fill_viridis_c(name = "log2 fc\n poly/ribo", option = "C") +
+  scale_fill_viridis_c(name = "log2\nfold change", option = "C") +
   coord_cartesian(xlim = c(-5, 4)) +
-  theme_classic() +
   labs(
     y = "time hrs.",
     x = "log2 fold change",
     title = "poly/ribo"
-  )
+  ) +
+  theme(legend.position = "none")
+
 ```
 
