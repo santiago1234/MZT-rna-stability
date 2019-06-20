@@ -54,3 +54,23 @@ egfp_path %>%
   pull(sequences) %>% 
   cat()
 cat("\n")
+
+
+# plot predictions for silent reporters -----------------------------------
+
+reporters <- read_csv("results_data/predict_silent_reporters.csv")
+
+reporters %>% 
+  ggplot(aes(x=predicted_stability, y=protein, color=p_optimal)) +
+  geom_point() +
+  geom_rangeframe(color="black") +
+  scale_color_gradient(low="blue", high = "red") +
+  ggrepel::geom_text_repel(aes(label=p_optimal)) +
+  labs(
+    y = "Fluorescent Intensity",
+    x = "predicted mRNA stability",
+    title = "Synonimous Reporters"
+  ) +
+  theme(legend.position = "none")
+ggsave("figures/synonimous_reporters.pdf", height = 2, width = 2.5)
+
