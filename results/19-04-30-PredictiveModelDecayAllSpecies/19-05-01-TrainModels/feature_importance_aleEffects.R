@@ -49,6 +49,19 @@ fimp <- plot(imp)$data %>%
 
 write_csv(fimp, "results_data/feature_importance.csv")
 
+
+# estimate effect (positive/negative) with linear model -------------------
+
+dta_scaled <- 
+  dta %>% 
+  mutate_if(is.numeric, .funs = function(x) as.numeric(scale(x)))
+
+## now fit linear model
+
+fit <- lm(decay_rate ~ ., data = dta_scaled)
+broom::tidy(fit) %>% 
+  write_csv("results_data/feature_effects_linearModel.csv")
+
 # get the effect for the top features -------------------------------------
 
 top_features <- 
