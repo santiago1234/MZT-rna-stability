@@ -1,3 +1,6 @@
 figures/neutraloptimized[[:space:]]-1.png filter=lfs diff=lfs merge=lfs -text
 figures/optimized-1.png filter=lfs diff=lfs merge=lfs -text
 figures/unnamed-chunk-1-1.png filter=lfs diff=lfs merge=lfs -text
+figures/neutraloptimized[[:space:]]-1.png filter=lfs diff=lfs merge=lfs -text
+figures/opt_gfp_silent_reporters-1.png filter=lfs diff=lfs merge=lfs -text
+figures/silent_reprs-1.png filter=lfs diff=lfs merge=lfs -text

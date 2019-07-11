@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
   )
 library(tidyverse)
 library(ggthemes)
-
+library(gridExtra)
 theme_set(theme_tufte(base_family = 'Helvetica'))
 ```
 
@@ -29,15 +29,6 @@ TODO: description
 
 ```{r neutraloptimized ,fig.height=3, fig.width=5}
 results <- read_csv("results_data/search.csv")
-
-results %>% 
-  filter(gene == "neutral human gene ENSG00000126214") %>% 
-  ggplot(aes(x=iteration, y=fitness, color=fitness)) +
-  geom_rangeframe(color="black") +
-  geom_point(shape='.', position = "jitter") +
-  scale_color_viridis_c("predited\nmRNA stability", option = "C") +
-  labs(title="protein optimization")
-
 ```
 
 ## Results Across Species
@@ -89,4 +80,79 @@ dta1 %>%
 
 ```
 
+
+## Silent Reporter Sequences
+
+```{r silent_reprs, fig.height=5, fig.width=5}
+silent_reps <- read_csv("results_data/silent_reporters_seqs.csv")
+silent_reps_opt_path <- read_csv("results_data/silentReporter_optimization_path.csv")
+
+
+qs_optimization <- 
+  silent_reps %>% 
+  filter(str_detect(id_seq, "opt")) %>% 
+  separate(id_seq, into = c("nothing", "p_optimal")) %>% 
+  mutate(p_optimal = as.numeric(p_optimal))
+
+methods_optimization <- 
+  silent_reps %>% 
+  filter(!str_detect(id_seq, "opt"))
+  
+p_rep <- silent_reps_opt_path %>% 
+  ggplot(aes(x=iteration, y=fitness)) +
+  geom_line(aes(group = optimization), color = "grey") +
+  geom_point(
+    data = qs_optimization,
+    aes(x = 5, y = predicted_stability_human293t, color=p_optimal),
+    size = 3, shape = 16, alpha=.9
+  ) +
+  scale_color_gradient2(low = "blue", high = "red", midpoint = 55) +
+  geom_point(
+    data = methods_optimization,
+    aes(x = 10, y = predicted_stability_human293t),
+    shape = 16, alpha=.9
+  ) +
+  ggrepel::geom_text_repel(
+    data = methods_optimization,
+    aes(x = 10, y = predicted_stability_human293t, label = id_seq)
+  ) +
+  theme(legend.position = "none") +
+  scale_x_log10() +
+  labs(
+    x = "iteration",
+    y = "predicted mRNA stability",
+    title = "Optimization Silent Reporters",
+    subtitle = "optimized for human 293t cells"
+  )
+```
+
+## eGFP optimization
+
+```{r opt_gfp_silent_reporters, fig.height=5, fig.width=10}
+gfp_search <- read_csv("results_data/eGFP_optimization_path.csv")
+gfp_seqs <- read_csv("results_data/gfp_sequences_predictions.csv")
+
+p_gfp <- gfp_search %>% 
+  ggplot(aes(x=iteration, y=fitness)) +
+  geom_line(aes(group = optimization), color = "grey") +
+  geom_point(
+    data = gfp_seqs,
+    aes(x = 5, y = predicted_stability_human293t),
+    shape = 16, alpha=.9
+  ) +
+  ggrepel::geom_text_repel(
+    data = gfp_seqs,
+    aes(x = 5, y = predicted_stability_human293t, label = seq_id)
+  ) +
+  scale_x_log10() +
+  labs(
+    x = "iteration",
+    y = "predicted mRNA stability",
+    title = "Optimization GFP",
+    subtitle = "optimized for fish MZT"
+  )
+
+
+grid.arrange(p_gfp, p_rep, ncol=2)
+```
 
