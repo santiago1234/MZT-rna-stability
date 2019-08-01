@@ -128,12 +128,12 @@ p_rep <- silent_reps_opt_path %>%
 
 ## eGFP optimization
 
-```{r opt_gfp_silent_reporters, fig.height=5, fig.width=10}
+```{r opt_gfp_silent_reporters, fig.height=4, fig.width=4}
 gfp_search <- read_csv("results_data/eGFP_optimization_path.csv")
 gfp_seqs <- read_csv("results_data/gfp_sequences_predictions.csv")
 
 p_gfp <- gfp_search %>% 
-  ggplot(aes(x=iteration, y=fitness)) +
+  ggplot(aes(x=iteration, y=`human | RPE | endogenous`)) +
   geom_line(aes(group = optimization), color = "grey") +
   geom_point(
     data = gfp_seqs,
@@ -150,9 +150,27 @@ p_gfp <- gfp_search %>%
     y = "predicted mRNA stability",
     title = "Optimization GFP",
     subtitle = "optimized for fish MZT"
-  )
+  ) +
+  coord_cartesian(ylim = c(-3, 3))
 
 
 grid.arrange(p_gfp, p_rep, ncol=2)
+```
+
+### distribution of endogenous genes
+
+```{r endoDistriRPEcells, fig.width=2, heigth=3}
+decay_rate <- read_csv("../19-04-30-PredictiveModelDecayAllSpecies/19-04-30-EDA/results_data/training_set.csv") %>% 
+  filter(specie == "human", cell_type == "293t")
+
+decay_rate %>% 
+  ggplot(aes(x=decay_rate)) +
+  geom_histogram(bins = 50, color="white", fill="grey") +
+  coord_cartesian(xlim = c(-3, 3)) +
+  labs(
+    title = "Distribution mRNA stability endogenous genes"
+  ) +
+  coord_flip()
+
 ```
 
