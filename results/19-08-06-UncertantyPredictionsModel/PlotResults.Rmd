@@ -1,0 +1,143 @@
+---
+title: "Predictions, Figures"
+author: "Santiago Medina"
+date: "8/8/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggthemes)
+library(gridExtra)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+
+
+## Test Data 
+
+
+```{r testdata, fig.height=3, fig.width=4}
+testdata <- read_csv("results_data/prediction_interavals_test_data.csv")
+
+testdata %>% 
+  ggplot(aes(x=median_prediction, y=y_observed)) +
+  geom_hex(bins=40) +
+  scale_fill_gradient(low="grey90", high = "black") +
+  ggpubr::stat_cor() +
+  geom_abline(linetype=2, size=1/3) +
+  labs(
+    y = "observed mRNA stability",
+    x = "predicted mRNA stability",
+    subtitle = "test data n = 7534"
+  )
+
+```
+
+
+## Reporter Sequences
+
+```{r reporters}
+reporters <- read_csv("results_data/reporters_predictions_intervals.csv")
+
+reporters_sub <- 
+  reporters %>% 
+  separate(gene_id, into = c("reporter", "Optimality"), sep = "\\|") %>% 
+  filter(
+    specie %in% c("human", "fish"),
+    cell_type %in% c("embryo mzt", "293t"),
+    datatype != "aamanitin ribo"
+  ) %>% 
+  mutate(id = str_c(specie, " | ", cell_type))
+
+p3 <- 
+  reporters_sub %>% 
+  ggplot(aes(x=median_prediction, y=Optimality, color=Optimality)) +
+  geom_point(shape=16, alpha=.99) +
+  geom_errorbarh(aes(xmin=lower_ci, xmax=upper_ci), height=.1, alpha=1/2) +
+  geom_rangeframe(color="black", alpha=1/2) +
+  facet_grid(reporter~specie) +
+  scale_color_manual(values = c("blue", "red")) +
+  coord_cartesian(xlim = c(-2, 1.5)) +
+  scale_x_continuous(breaks = c(-2, -1, 0, 1)) +
+  theme(legend.position = "none", axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  labs(
+    y = "Reporter",
+    x = "predicted mRNA stability",
+    title = "experimental validation (reporter genes)"
+  )
+```
+
+
+```{r testbyspecie, fig.height=2, fig.width=10}
+testdata %>% 
+  mutate(id = paste(specie, " | ", cell_type)) %>% 
+  ggplot(aes(x=median_prediction, y=y_observed)) +
+  geom_point(shape=16, alpha=1/2, size=1) +
+  facet_grid(~id) +
+  ggpubr::stat_cor(size=2)
+
+```
+
+
+
+Add the scatter plot for the predictions and the histrogram of the distribution.
+
+```{r validation, fig.height=6, fig.width=4.5}
+test_data_sub <- 
+  testdata %>% 
+  filter(
+    specie %in% c("human", "fish"),
+    cell_type %in% c("embryo mzt", "293t"),
+    datatype != "aamanitin ribo"
+  )
+
+# plot bivariate density
+p1 <- 
+  test_data_sub %>% 
+  ggplot(aes(x=median_prediction, y=y_observed)) +
+  geom_hex(bins=30) +
+  facet_grid(~specie) +
+  ggpubr::stat_cor(size=2) +
+  geom_abline(size=1/2, linetype=2) +
+  scale_fill_viridis_c(option = "A") +
+  coord_cartesian(xlim = c(-2, 1.5)) +
+  scale_y_continuous(breaks = c(-2, 0, 2), expand = c(0, 0)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  labs(
+    x = NULL
+  )
+
+
+p2 <- 
+  test_data_sub %>% 
+  ggplot(aes(x=median_prediction)) +
+  geom_histogram(bins=25, fill="grey40", color="white") +
+  facet_grid(~specie) +
+  coord_cartesian(xlim = c(-2, 1.5)) +
+  scale_x_continuous(breaks = c(-1, 0, 1))  +
+  labs(
+    title = "predicted mRNA stability distribution (endogenous genes)",
+    x = NULL
+  ) +
+  theme(
+    axis.text.x =  element_blank(),
+    #axis.ticks.x = element_blank()
+  )
+
+grid.arrange(p2, p1, p3)
+
+
+```
+

@@ -30,7 +30,7 @@ importance_all <- read_csv("results_data/feature_imp_all.csv")
 top_30_featutes <- arrange(importance_all, -importance) %>% 
   filter(!feature %in% c("cell_type", "datatype", "specie")) %>% 
   pull(feature) %>% 
-  .[1:30]
+  .[1:22]
   
 
 importance_all <- importance_all %>% 
@@ -46,14 +46,17 @@ importance_specie <- read_csv("results_data/feature_imp_by_specie.csv") %>%
 
 importance_specie %>% 
   mutate(specie = factor(specie, levels = c("human", "mouse", "fish", "xenopus"))) %>% 
-  filter(feature %in% top_30_featutes) %>% 
+  filter(
+    feature %in% top_30_featutes,
+    !feature %in% c("cdslenlog", "utrlenlog")
+    ) %>% 
   ggplot(aes(x=importance, y=reorder(feature, global_imp), color=as.character(effect))) +
   geom_point(aes(shape = specie), alpha=.9) +
   scale_color_colorblind() +
   labs(
     y = NULL,
     x = "Feature Importance (loss:mae)",
-    title = "Top 30 predictive features"
+    title = "Most predictive codons"
   ) +
   theme(legend.position = "bottom")
 
