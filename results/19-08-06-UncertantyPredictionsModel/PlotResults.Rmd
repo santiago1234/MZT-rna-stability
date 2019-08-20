@@ -81,11 +81,20 @@ p3 <-
 ```{r testbyspecie, fig.height=2, fig.width=10}
 testdata %>% 
   mutate(id = paste(specie, " | ", cell_type)) %>% 
+  group_by(id) %>% 
+  mutate(
+    n = n()
+  ) %>% 
+  ungroup() %>% 
+  mutate(
+    id = paste(id, "\nn = ", n)
+  ) %>% 
   ggplot(aes(x=median_prediction, y=y_observed)) +
-  geom_point(shape=16, alpha=1/2, size=1) +
+  geom_hex() +
+  scale_fill_continuous(low="grey80", high="black") +
   facet_grid(~id) +
-  ggpubr::stat_cor(size=2)
-
+  geom_rangeframe(sides="b", alpha=2/3) +
+  ggpubr::stat_cor(size=2) 
 ```
 
 
