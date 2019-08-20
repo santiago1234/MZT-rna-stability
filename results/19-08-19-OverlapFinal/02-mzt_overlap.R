@@ -70,11 +70,11 @@ data <-
   data %>% 
   mutate(pathway = factor(pathway, levels = c("miR430", "m6A"))) %>% 
   group_by(specie, pathway) %>% 
-  mutate(optimality = ntile(-PLS1, 5)) %>% 
+  mutate(optimality = ntile(-PLS1, 4)) %>% 
   ungroup()
 
 data %>% 
-  filter(optimality %in% c(1, 5)) %>% # plot the extreme quantiles
+  filter(optimality %in% c(1, 4)) %>% # plot the extreme quantiles
   ggplot(aes(x=target, y=log2FC, color=as.character(optimality))) +
   geom_tufteboxplot() +
   geom_rangeframe(sides="l", color="black", alpha=2/3) +
