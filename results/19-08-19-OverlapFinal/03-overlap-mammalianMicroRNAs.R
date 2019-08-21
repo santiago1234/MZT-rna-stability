@@ -1,7 +1,7 @@
 library(tidyverse)
 library(ggthemes)
 library(scales)
-
+library(ggforce)
 theme_set(theme_tufte(base_family = "Helvetica"))
 
 
@@ -80,7 +80,7 @@ dtaplot %>%
   filter(optimality %in% c(1, 4)) %>% 
   ggplot(aes(x=targets, y=expression_level, color=as.character(optimality))) +
   geom_rangeframe(sides = "l", color="black", alpha=2/3) +
-  geom_tufteboxplot() +
+  geom_sina(size=1/5, shape=16, alpha=.99) +
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_x_discrete(labels = c("no targets", "targets")) +

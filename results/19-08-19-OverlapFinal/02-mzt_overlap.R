@@ -1,6 +1,6 @@
 library(tidyverse)
 library(ggthemes)
-
+library(ggforce)
 theme_set(theme_tufte(base_family = "Helvetica"))
 
 # gather the data ---------------------------------------------------------
@@ -76,7 +76,7 @@ data <-
 data %>% 
   filter(optimality %in% c(1, 4)) %>% # plot the extreme quantiles
   ggplot(aes(x=target, y=log2FC, color=as.character(optimality))) +
-  geom_tufteboxplot() +
+  geom_sina(size=1/5, shape=16, alpha=.99) +
   geom_rangeframe(sides="l", color="black", alpha=2/3) +
   scale_x_discrete(labels = c("targets", "no targets")) +
   scale_color_manual(values = c("red", "blue")) +
@@ -88,7 +88,7 @@ data %>%
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 30, hjust = 1)
-    )
+  )
 
 ggsave("figures/mzt_overlap.pdf", width = 4, height = 4)
 

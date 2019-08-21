@@ -1,7 +1,7 @@
 library(tidyverse)
 library(ggthemes)
 library(scales)
-
+library(ggforce)
 theme_set(theme_tufte(base_family = "Helvetica"))
 
 # mouse analysis ----------------------------------------------------------
@@ -30,7 +30,7 @@ data <- data %>%
 data %>% 
   filter(optimality %in% c(1, 4)) %>% 
   ggplot(aes(x=target, y=decay_rate, color=as.character(optimality))) +
-  geom_tufteboxplot() +
+  geom_sina(size=1/5, shape=16, alpha=.99) +
   geom_rangeframe(sides = "l", color="black", alpha=2/3) +
   facet_grid(~pathway) +
   scale_x_discrete(labels = c("no targets", "targets")) +
