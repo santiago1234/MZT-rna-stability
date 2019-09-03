@@ -37,6 +37,9 @@ mir155 <- quantifications %>%
 mir155 <- mir155 %>% 
   filter(!str_detect(sample_name, "12hr"), expression_level > 0)
 
+# pvalue optimality effects in mrna level
+lm(log(expression_level) ~ PLS2, data = mir155) %>% summary
+# PLS2        0.224319 <2e-16 ***
 mir155 <- 
   mir155 %>% 
   select(gene_id, expression_level, PLS1, PLS2, targets, sample_name) %>% 
@@ -107,3 +110,20 @@ dtaplot %>%
   unnest(tf) %>% 
   filter(term != "(Intercept)")
 
+
+# minimalist plot ---------------------------------------------------------
+
+dtaplot %>% 
+  mutate(optimality = str_c("q", optimality)) %>%
+  ggplot(aes(x=optimality, y=expression_level)) +
+  geom_sina(shape='.', alpha=.99) +
+  geom_rangeframe(sides = "l", color="black", alpha=2/3) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  facet_grid(~micro + targets) +
+  labs(
+    title = "mammalian microRNAs",
+    y = "RNA level\nlog10 RPKM",
+    x = "optimality level"
+  )
+ggsave("figures/mammalian_micros_minimal.pdf", height = 2.5, width = 4)

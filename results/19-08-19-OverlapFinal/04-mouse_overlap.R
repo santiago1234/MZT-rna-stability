@@ -56,3 +56,21 @@ data %>%
   unnest(tf) %>% 
   filter(term == "PLS1")
 
+# minimalist plot ---------------------------------------------------------
+
+
+data %>% 
+  mutate(optimality = str_c("q", optimality)) %>% 
+  ggplot(aes(x=optimality, y=decay_rate)) +
+  geom_sina(shape='.', alpha=.99) +
+  geom_rangeframe(sides = "l", color="black", alpha=2/3) +
+  facet_grid(~pathway + target) +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(
+    y = "mRNA stability\ndecay rate scaled",
+    title = "combinatorial code in mESCs",
+    x = NULL
+  )
+ggsave("figures/mouse_minimal.pdf", height = 2, width = 4)

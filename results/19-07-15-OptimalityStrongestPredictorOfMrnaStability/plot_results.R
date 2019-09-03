@@ -44,7 +44,7 @@ pathways <-
 p1 <- pathways %>% 
   mutate(pathway = factor(pathway, levels = c("non-optimal", "m6A", "microRNA", "all genes","optimal"))) %>% 
   ggplot(aes(y=stability, x = pathway, fill = pathway)) +
-  geom_boxplot(size=1/5, alpha = 3/4, outlier.shape = NA) +
+  geom_boxplot(size=2/5, alpha = 3/4, outlier.shape = NA) +
   facet_grid(~specie) +
   scale_fill_manual(values = c("blue", "goldenrod2", "forestgreen" , "grey", "red")) +
   coord_flip(ylim = c(-3, 3)) +
@@ -92,3 +92,20 @@ p2 <- mdlw %>%
 pdf("model_comparison.pdf", width = 6, height = 3)
 grid.arrange(p1, p2)
 dev.off()
+
+
+# minimal plot version ----------------------------------------------------
+
+mdlw %>% 
+  ggplot(aes(x=fraction, y = weights, color = weights)) +
+  geom_text(aes(label = round(weights, 3)), size=3) +
+  ggrepel::geom_text_repel(aes(label=model)) +
+  geom_rug(sides="l") +
+  geom_rangeframe(sides="l", color = "black") +
+  scale_color_gradient(low = "grey", high = "black") +
+  facet_grid(~specie) +
+  theme(legend.position = "none", axis.ticks = element_blank()) +
+  labs(y = "model weights\n(Bayesian bootstrap)", x="fraction of coding genes with potential regulation")
+
+ggsave("model_comparison_minimal.pdf", width = 8, height = 2)
+

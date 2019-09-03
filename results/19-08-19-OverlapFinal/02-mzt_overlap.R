@@ -91,8 +91,6 @@ data %>%
   )
 
 ggsave("figures/mzt_overlap.pdf", width = 4, height = 4)
-
-
 data %>% 
   group_by(specie, pathway, target) %>% 
   nest() %>% 
@@ -102,3 +100,18 @@ data %>%
   ) %>% 
   unnest(tf) %>% 
   filter(term == "PLS1")
+
+
+data %>% 
+  mutate(optimality = str_c("q", optimality)) %>% 
+  ggplot(aes(x=optimality, y=log2FC)) +
+  geom_sina(shape='.', alpha=.99) +
+  geom_rangeframe() +
+  facet_grid(specie~pathway + target) +
+  labs(
+    title = "combinatorial code MZT",
+    y = "log2 fold change\n late stage (fish = 6 hrs, xenopus = 9 hrs) / 2 hrs",
+    x = "codon optimality level"
+  )
+
+ggsave("figures/mzt_overlap_minimal.pdf", width = 4, height = 4)
