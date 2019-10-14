@@ -78,6 +78,12 @@ mymodels = {
     'lasso': lasso_search.best_estimator_,
     'enet': enet_search.best_estimator_
 }
+
+# save the trained models
+
+for model_name, model_trained in mymodels.items():
+    modelevaluation.save_model(model_trained, model_name, "results_data/trained_models/")
+
 modelevaluation.eval_models(mymodels, preprocessing, test_x, test_y).to_csv("results_data/val_linearmodels.csv", index=False)
 
 # 10-FOLD GROUPED-CV ALL MODELS
