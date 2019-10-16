@@ -112,10 +112,3 @@ for model_name, model_trained in mymodels.items():
 modelevaluation.eval_models(mymodels, preprocessing, test_x, test_y).to_csv(
     "results_data/val_non-linearmodels.csv", index=False)
 
-####################################
-# 10-FOLD CV IN TRAINING SET
-####################################
-results = modelevaluation.crossvalidation(
-    mymodels, train_x_transformed, train_y, groups)
-results.to_csv('results_data/cv_linearmodels.csv', index=False)
-

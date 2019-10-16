@@ -51,25 +51,27 @@ knn_search = modelevaluation.gridsearch(
 
 
 #########
-# Kernel Ridge
+# SVM linear kernel
 #########
-kerRidge_reg = KernelRidge(kernel='rbf', gamma=0.1)
-kerRidge_grid = {"alpha": [0.9, 0.5, 0.2, 0.1],
-                 "gamma": np.array([1e-03, 1.e-02, 1.e-01, 1.e+0])}
+svr_reg_liner = SVR(kernel='linear')
+svr_grid = {'C': [1, 10, 100, 1000],
+            'gamma': [.1, .01, .001]
+            }
 
-kerRidge_search = modelevaluation.gridsearch(
-    kerRidge_reg, kerRidge_grid, train_x_transformed, train_y, groups, cores=10)
+svr_search_linear = modelevaluation.gridsearch(
+    svr_reg_liner, svr_grid,
+    train_x_transformed,
+    train_y, groups,
+    cores=30)
 
 #########
 # SVM RBF kernel
 #########
-svr_reg = SVR()
-svr_grid = {'C': [10, 100, 1000],
-            'gamma': [0.01, 0.001],
-            'kernel': ['rbf']},
+svr_reg_rbf = SVR(kernel='rbf')
 
-svr_search = modelevaluation.gridsearch(
-    svr_reg, svr_grid,
+
+svr_search_rbf = modelevaluation.gridsearch(
+    svr_reg_rbf, svr_grid,
     train_x_transformed,
     train_y, groups,
     cores=30)
@@ -81,8 +83,8 @@ svr_search = modelevaluation.gridsearch(
 
 mymodels = {
     'knn': knn_search.best_estimator_,
-    'kernel_ridge': kerRidge_search.best_estimator_,
-    'svm': svr_search.best_estimator_
+    'svm_linear': svr_search_linear.best_estimator_,
+    'svm_rbf': svr_search_rbf.best_estimator_
 }
 
 # save the trained models
