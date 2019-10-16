@@ -110,5 +110,5 @@ for model_name, model_trained in mymodels.items():
 
 # evaluate test data
 modelevaluation.eval_models(mymodels, preprocessing, test_x, test_y).to_csv(
-    "results_data/val_non-linearmodels.csv", index=False)
+    "results_data/val_trees-Ensebmls.csv", index=False)
 
