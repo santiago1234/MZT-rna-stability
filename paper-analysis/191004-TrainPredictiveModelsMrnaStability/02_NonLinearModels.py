@@ -54,8 +54,8 @@ knn_search = modelevaluation.gridsearch(
 # SVM linear kernel
 #########
 svr_reg_liner = SVR(kernel='linear')
-svr_grid = {'C': [1, 10, 100, 1000],
-            'gamma': [.1, .01, .001]
+svr_grid = {'C': [10, 100, 1000],
+            'gamma': [1, .01, .001]
             }
 
 svr_search_linear = modelevaluation.gridsearch(
