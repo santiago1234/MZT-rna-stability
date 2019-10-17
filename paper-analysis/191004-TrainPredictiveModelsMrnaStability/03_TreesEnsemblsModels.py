@@ -88,7 +88,7 @@ gbm_grid = {'loss':['huber'],
           'max_depth':[10, 15, 20],
           'max_features':['log2']}
 
-gbm_search = modelevaluation.gridsearch(gbm_reg, gb,_grid, train_x_transformed, train_y, groups, cores=25)
+gbm_search = modelevaluation.gridsearch(gbm_reg, gbm_grid, train_x_transformed, train_y, groups, cores=25)
 
 ####################################
 # EVALUATE MODELS ON TEST DATA
