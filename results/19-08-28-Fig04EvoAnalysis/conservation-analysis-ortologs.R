@@ -107,17 +107,27 @@ convined_datos <-
 datos_plot <- convined_datos %>% 
   filter(stability_rank_xen == stability_rank_fish, stability_rank_xen == 1)
 
+medianas <- datos_plot %>% 
+  group_by(group) %>% 
+  summarise(mediana = median(optimality_ratio_fish))
+
+
 datos_plot %>% 
   ggplot(aes(x=reorder(group, optimality_ratio_fish, mean), y=optimality_ratio_fish, fill=group)) +
-  geom_boxplot(outlier.shape = NA, size=1/3) +
+  ggforce::geom_sina(aes(color=group), shape=21, alpha=.99, seed=3, color="black") +
   geom_rangeframe(size=1/4) +
   scale_fill_viridis_d(option = "A") +
+  geom_errorbar(data = medianas, aes(ymin=mediana, ymax=mediana, y=mediana, group)) +
   labs(
     x = "ortholog gene miR-430 target type",
     y = "codon optimality ratio\nbazzini et al 2016",
-    title = "unstable genes in both specie"
+    title = "unstable genes in both specie (non-significant difference)"
   ) +
+  scale_color_viridis_d(option = "A") +
   theme_tufte(base_family = "Helvetica") +
   theme(legend.position = "none")
 
-ggsave("figures/05-analysis-orthologs-conserved-miR430-type.pdf", height = 3.5, width = 3.5)
+
+
+ggsave("figures/05-analysis-orthologs-conserved-miR430-type.pdf", height = 3.5, width = 4.5)
+

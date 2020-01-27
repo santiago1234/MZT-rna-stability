@@ -36,7 +36,7 @@ datum_plot <-
   group_by(specie) %>% 
   mutate(
     `miR-430 seed strength` = map_chr(`3utr`, mir_seed_type),
-    `number of miR-430 seeds` = map_dbl(miR430, ~if_else(. > 3, 3, .)),
+    `number of miR-430 seeds` = map_dbl(miR430, ~if_else(. > 2, 2, .)),
     stability = ntile(x = log2FC, n = 4),
   ) %>% 
   filter(stability == 1) %>% 
@@ -44,7 +44,7 @@ datum_plot <-
   gather(key = reg, value = typer, -gene_id, -specie, -PLS1) %>% 
   mutate(
     reg = factor(reg, levels = c("number of miR-430 seeds", "miR-430 seed strength")),
-    typer = factor(typer, levels = c("0", "1", "2", "3", "no seed", "6-mer", "7-mer", "8-mer"))
+    typer = factor(typer, levels = c("0", "1", "2","no seed", "6-mer", "7-mer", "8-mer"))
   )
 
 
@@ -54,7 +54,7 @@ dp_median <-
   summarise(median_pls = median(PLS1)) %>% 
   filter(!is.na(median_pls))
 
-plt_colors <- c("grey", rep("grey20", 2), "grey", rep("grey20", 3))
+
 
 datum_plot %>% 
   ggplot(aes(x=typer, y=PLS1, color=typer)) +
@@ -67,7 +67,7 @@ datum_plot %>%
     size = 1/5
   ) +
   facet_grid(specie~reg, scales = "free_x", space = "free_x") +
-  scale_color_manual(values = c("#bf812d", "#35978f", "#01665e","#003c30", "#bf812d", "#35978f", "#01665e","#003c30")) +
+  scale_color_manual(values = c("#000000", "#009E73", "#009E73","#000000", "#009E73", "#009E73", "#009E73")) +
   
   theme(
     legend.position = "none",
@@ -78,7 +78,7 @@ datum_plot %>%
     x = NULL
   )
 
-ggsave("figures/03_optimality_level_miR430targets.pdf", height = 3, width = 3)
+ggsave("figures/03_optimality_level_miR430targets.pdf", height = 3, width = 3.5)
 
 
 # statistics --------------------------------------------------------------
