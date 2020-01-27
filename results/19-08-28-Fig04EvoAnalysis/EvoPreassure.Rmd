@@ -1,0 +1,355 @@
+---
+title: "Evolutionary Pressure"
+author: "Santiago Medina"
+date: "8/28/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggthemes)
+library(ggforce)
+library(brms)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+
+
+```{r}
+# load data sets
+opt <- read_csv("results_data/optimality_information.csv")
+foldchange <- read_csv("results_data/fold_change_late_vs_early.csv")
+
+datum <- inner_join(opt, foldchange) %>% 
+  mutate(utrlen = str_length(`3utr`)) %>% 
+  filter(!is.na(`3utr`), !is.na(coding), !is.infinite(log2FC))
+```
+
+
+```{r mirVSopt, fig.width=4, fig.height=5}
+mir_seed_type <- function(utr_seq) {
+  if (str_detect(utr_seq, pattern = "AGCACTTA")) {
+    return("8-mer")
+  }
+  
+  if (str_detect(utr_seq, pattern = "AGCACTT") | str_detect(utr_seq, pattern = "GCACTTA")) {
+    return("7-mer")
+  }
+  
+  if (str_detect(utr_seq, pattern = "GCACTT") | str_detect(utr_seq, pattern = "AGCACT")) {
+    return("6-mer")
+  }
+  
+  "no seed"
+  
+}
+
+# tidy data for plotting
+datum_plot <- 
+  datum %>% 
+  group_by(specie) %>% 
+  mutate(
+    `miR-430 seed strength` = map_chr(`3utr`, mir_seed_type),
+    `number of miR-430 seeds` = map_dbl(miR430, ~if_else(. > 1, 2, .)),
+    stability = ntile(x = log2FC, n = 4),
+  ) %>% 
+  filter(stability == 1) %>% 
+  select(gene_id, specie, PLS1,`miR-430 seed strength`, `number of miR-430 seeds`) %>% 
+  gather(key = reg, value = typer, -gene_id, -specie, -PLS1) %>% 
+  mutate(
+    reg = factor(reg, levels = c("number of miR-430 seeds", "miR-430 seed strength")),
+    typer = factor(typer, levels = c("0", "1", "2", "no seed", "6-mer", "7-mer", "8-mer"))
+  )
+
+
+dp_median <- 
+  datum_plot %>% 
+  group_by(reg, typer, specie) %>% 
+  summarise(median_pls = median(PLS1)) %>% 
+  filter(!is.na(median_pls))
+
+plt_colors <- c("grey", rep("black", 2), "grey", rep("black", 3))
+
+datum_plot %>% 
+  ggplot(aes(x=typer, y=PLS1, color=typer)) +
+  geom_sina(shape=16, size=1/3, alpha=.99) +
+  geom_rangeframe(sides="l", size=1/5, color="black") +
+  geom_errorbar(
+    data = dp_median,
+    aes(ymin = median_pls, ymax = median_pls, y = median_pls),
+    #    color = "black",
+    size = 1/5
+  ) +
+  facet_grid(specie~reg, scales = "free_x", space = "free_x") +
+  scale_color_manual(values = plt_colors) +
+  theme(
+    legend.position = "none"
+  ) +
+  labs(
+    y = "optimality level: PLS1",
+    x = NULL
+  )
+
+
+
+```
+
+the analysis shows that in unstable genes (top quartile) we see a correlation,
+the number of microRNA sites correlates with the optimality level.
+
+```{r pvalues}
+datum %>% 
+  group_by(specie) %>% 
+  mutate(
+    stability = ntile(x = log2FC, n = 4),
+    miR430 = map_dbl(miR430, ~if_else(. > 1, 2, .))
+  ) %>% 
+  filter(stability == 1) %>% 
+  nest() %>% 
+  mutate(
+    fit = map(data, ~lm(PLS1 ~ miR430, data = .)),
+    tfit = map(fit, broom::tidy)
+  ) %>% 
+  unnest(tfit) %>% 
+  knitr::kable()
+```
+
+***
+
+## Modeling
+
+see the previous analysis: __*../19-03-20-EvolutionaryPreassure/EvoPressure2.html*__
+
+The following model will be used to evaluate our hypothesis:
+
+$$
+\begin{aligned}
+\text{miR-430 sites} &\sim \text{Binomial}(n=\text{3' UTR length}, p = p_i) \\
+logit(p_i) &= \alpha + \beta\text{mRNA stability} + \beta\text{optimality}
+\end{aligned}
+$$
+We fit the model for fish only
+
+```{r model}
+
+dt2 <- datum %>% 
+  mutate(
+    utrlen = str_length(`3utr`)
+  ) %>% 
+  filter(specie == "fish")
+
+model <- brm(data = dt2, family = binomial,
+          miR430 | trials(utrlen) ~ 1 + PLS1 + PLS2 + log2FC,
+          prior(normal(0, 10), class = Intercept),
+          seed = 10, cores = 2, chains = 2)
+```
+
+
+```{r mirEnrichmentHeatmap, fig.height=2.5, fig.width=4}
+topredict <- tibble(
+  PLS1 = seq(-6, 6, length.out = 50),
+  PLS2 = seq(-6, 6, length.out = 50)
+  
+) %>% 
+  crossing(
+    tibble(log2FC = seq(-6, 6, length.out = 50))
+  ) %>% 
+  mutate(utrlen = quantile(dt2$utrlen)[3])
+
+
+topredict <- 
+  fitted(model, newdata = topredict) %>% 
+  as_tibble() %>% 
+  bind_cols(topredict)
+
+smarca2 <- dt2 %>% 
+  filter(gene_id == "ENSDARG00000008904") %>% 
+  mutate(Estimate=10) %>% 
+  mutate(name = "smarca2")
+
+
+# probability heatmap -----------------------------------------------------
+
+topredict %>% 
+  ggplot(aes(x=log2FC, y=PLS1, color=Estimate)) +
+  geom_point(shape=15, size=4) +
+  geom_text(data = smarca2, aes(x = log2FC, y = PLS1, label=name), color="black") +
+  geom_point(data = smarca2, aes(x = log2FC, y = PLS1), color="black", shape=16, alpha=.9) +
+  scale_color_distiller(direction = 1) +
+  scale_x_continuous(breaks = c(-5, 0, 5)) +
+  coord_cartesian(xlim = c(-6, 6), ylim=c(-6, 6)) +
+  labs(
+    x = "mRNA stability\n(log2 fold change)",
+    y = "optimality level"
+  )
+
+
+```
+
+```{r histogramas, fig.height=1.5, fig.width=2.5}
+y_breas <- c(100, 200, 300)
+
+dt2 %>% 
+  ggplot(aes(x=-PLS1)) +
+  geom_histogram(fill="grey", color = "white", bins = 50, size=2/5) +
+  geom_hline(yintercept = y_breas, color = "white", size=1/5) +
+  coord_cartesian(xlim = c(-6, 6)) +
+  theme(
+    axis.ticks.y = element_blank()
+  )
+
+dt2 %>% 
+  ggplot(aes(x=log2FC)) +
+  geom_histogram(fill="grey", color = "white", bins = 50, size=2/5) +
+  coord_cartesian(xlim = c(-6, 6)) +
+  scale_y_continuous(breaks = y_breas) +
+  geom_hline(yintercept = y_breas, color = "white", size=1/5) +
+  theme(
+    axis.ticks.y = element_blank()
+  )
+
+```
+
+example plot
+
+```{r marginalPlot, fig.height=2, fig.width=4.5}
+paramspreds <- 
+  topredict %>% 
+  select(PLS1:utrlen) %>% 
+  select(-log2FC) %>% 
+  distinct() %>% 
+  crossing(tibble(log2FC = c(-5, 0, 5)))
+
+res2 <- fitted(model, newdata = paramspreds) %>% 
+  as_tibble() %>% 
+  bind_cols(paramspreds)
+
+res2 %>%
+  mutate(log2FC = str_c("log2 fold change = ", log2FC)) %>% 
+  ggplot(aes(x=PLS1, y=Estimate)) +
+  geom_ribbon(aes(ymin=Q2.5, ymax=Q97.5), alpha=1/5) +
+  geom_line() +
+  facet_grid(.~log2FC) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(
+    x = "optimality level",
+    y = "miR-430 enrichment"
+  ) +
+  theme(axis.ticks = element_blank())
+
+```
+
+## Orthologs analysis
+
+```{r}
+ortologs <- read_csv("results_data/orthologs_fishMaternal_to_Xen.csv")
+
+optimality <- read_csv("results_data/optimality_information.csv") %>% 
+  select(-coding, -`3utr`)
+
+
+## fish optimality
+
+optimality_f <- optimality %>% 
+  filter(specie == "fish") %>% 
+  select(-specie)
+colnames(optimality_f) <- str_c(colnames(optimality_f), "_fish")
+
+optimality_f <- rename(optimality_f, ortolog_fish = gene_id_fish)
+
+
+optimality_x <- optimality %>% 
+  filter(specie == "xenopus") %>% 
+  select(-specie)
+colnames(optimality_x) <- str_c(colnames(optimality_x), "_xenopus")
+
+optimality_x <- rename(optimality_x, ortolog_xen = gene_id_xenopus)
+
+ortologs <- inner_join(ortologs, optimality_f) %>% 
+  inner_join(optimality_x) %>% 
+  mutate(
+   # optimality_ratio_fish = scale(optimality_ratio_fish) %>% as.numeric(),
+    #optimality_ratio_xenopus = scale(optimality_ratio_xenopus) %>% as.numeric(),
+  )
+
+```
+
+### Optimality conservation
+
+we plot the optimality ratio as defined in embo
+
+```{r optRatioOrto, fig.height=3, fig.width=3.5}
+p_ort1 <- ortologs %>% 
+    ggplot(aes(x=optimality_ratio_fish, y=optimality_ratio_xenopus)) +
+    geom_point(shape=16, alpha=.7, size=1/2) +
+    ggpubr::stat_cor()
+
+```
+
+
+```{r FoldChangeOrto, fig.height=2, fig.width=5}
+foldchange <- read_csv("results_data/fold_change_late_vs_early.csv")
+
+fc_x <- filter(foldchange, specie == "xenopus") %>% 
+  rename(log2FC_xenopus = log2FC, ortolog_xen = gene_id) %>% 
+  mutate(log2FC_xenopus = scale(log2FC_xenopus) %>% as.numeric()) %>% 
+  filter(!is.infinite(log2FC_xenopus)) %>% 
+  select(-specie)
+
+fc_f <- filter(foldchange, specie == "fish") %>% 
+  rename(log2FC_fish = log2FC, ortolog_fish = gene_id) %>% 
+  filter(!is.infinite(log2FC_fish)) %>% 
+  mutate(log2FC_fish = scale(log2FC_fish) %>% as.numeric()) %>% 
+  select(-specie)
+
+ortologs <- 
+  inner_join(ortologs, fc_x) %>% 
+  inner_join(fc_f)
+
+# color code by miR430 regulation -----------------------------------------
+
+dplot <- 
+  ortologs %>% 
+  mutate(
+    `no target` = (miR430_fish == 0) & (miR430_xenopus == 0),
+    `both target` = (miR430_fish > 0) & (miR430_xenopus > 0),
+    `only xenopus` = (miR430_fish == 0) & (miR430_xenopus > 0),
+    `only fish` = (miR430_fish > 0) & (miR430_xenopus == 0),
+  ) %>% 
+  filter(!is.na(miR430_xenopus)) %>% 
+  select(ortolog_fish, log2FC_fish, log2FC_xenopus, `no target`: `only fish`) %>% 
+  gather(key = grp, value = is_in_grp, -ortolog_fish, -log2FC_fish, -log2FC_xenopus) %>% 
+  filter(is_in_grp) %>% 
+  mutate(grp = factor(grp, levels = c("no target", "only fish", "only xenopus", "both target")))
+
+p_fc <- dplot %>% 
+  sample_frac(size = 1) %>% 
+  ggplot(aes(x=log2FC_fish, y=log2FC_xenopus)) +
+  geom_point(shape=16, size=1/2, alpha=.9) +
+  ggpubr::stat_cor(color="black")
+
+gridExtra::grid.arrange(p_ort1, p_fc, nrow=1)
+```
+
+mirRtargets conservation
+
+
+```{r mirOrto, fig.height=1, fig.width=2}
+dplot %>% 
+  ggplot(aes(x=grp, fill=grp)) +
+  geom_bar() +
+  coord_flip() +
+  scale_fill_colorblind() +
+  theme(legend.position = "none") +
+  scale_y_continuous(breaks = c(0, 500, 1000))
+```
+
