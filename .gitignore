@@ -1,5 +1,11 @@
+# ignore recent figures
+*.png
+# ignore this folder
+manuscript/*
 # ignore some files
 *.fasta
+*.fa
+*.txt
 *.tab
 # ignore saved sklearn models
 *.joblib
