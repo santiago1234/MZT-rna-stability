@@ -33,15 +33,19 @@ load_syla_file <- function(syl_file) {
 
 sylamer_results <- 
   map_df(sylamer_results, load_syla_file)
+
 sylamer_results <- 
   sylamer_results %>% 
-  filter(k==6, ranked_by == "residual")
+  filter(k==6)
 
 # discard xenopus
 
 sylamer_results <- 
   sylamer_results %>% 
-  filter(specie == "fish")
+  filter(specie == "fish") %>% 
+  mutate(
+    ranked_by = factor(ranked_by, levels = c("residual", "observedlog2FC", "predictedStability"))
+  )
 
 
 # kier elements, i go this by trial and error visualiz --------------------
@@ -53,7 +57,6 @@ elementos <- bind_rows(
 ) %>% 
   inner_join(sylamer_results)
 
-
 # draw the name
 
 elementos_peak <- elementos %>% 
@@ -64,14 +67,14 @@ set.seed(42)
 ## sample_300 k-mers
 mers_sample <- sylamer_results$kmer %>% 
   unique() %>% 
-  sample(500)
+  sample(1000)
 
 sylamer_results %>% 
   filter(!kmer %in% elementos$kmer) %>% 
   filter(kmer %in% mers_sample) %>% 
   ggplot(aes(x=rank, y=log10pavl, group=kmer)) +
   geom_line(position="jitter", color="grey", size=1/10) +
-  geom_rangeframe(size=1/10) +
+  geom_rangeframe(size=1/3) +
   geom_hline(yintercept = c(-1, 1) * log10(0.001), linetype=3, size=1/3) +
   scale_x_continuous(expand = c(0, 0), breaks = c(0, 2000, 4000), labels = c("0k", "2k", "4k")) +
   scale_y_continuous(breaks = c(-3, 0, 3, 5, 10)) +
@@ -84,7 +87,25 @@ sylamer_results %>%
   labs(
     x = "3' UTRs sorted by residual values",
     y = "log10 (enrichment P-value)"
-  )
+  ) +
+  facet_grid(~ranked_by)
 
-ggsave("figures/mir430-m6a-m5c-kmerslike.pdf", height = 3, width = 6)
 
+ggsave("figures/mir430-m6a-m5c-kmerslike-Supplemental.pdf", height = 4, width = 11)
+best_pvalues <- elementos %>% 
+  group_by(motif, ranked_by) %>% 
+  filter(log10pavl == max(log10pavl))
+
+best_pvalues %>% 
+  write_csv("results_data/pvalues_comparing_residual_VS_WT.csv")
+
+best_pvalues %>% 
+  ungroup() %>% 
+  mutate(ranked_by = fct_rev(ranked_by)) %>% 
+  ggplot(aes(x=ranked_by, y=log10pavl, group=ranked_by, fill=motif)) +
+  geom_bar(stat = "identity", position = 'dodge', color=NA, size=1/4) +
+  scale_fill_manual(values = c("#000000", "#E69F00", "#009E73")) +
+  coord_flip() +
+  theme(legend.position = 'none') +
+  facet_grid(motif~.)
+ggsave("figures/p-vals-plot.pdf", height = 2, width = 3)

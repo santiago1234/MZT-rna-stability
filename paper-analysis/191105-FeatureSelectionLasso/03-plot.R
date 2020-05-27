@@ -53,7 +53,11 @@ effects <- results %>%
   )
 
 
-
+top10 <- effects %>% 
+  arrange(-abs(mf)) %>% 
+  pull(predictor) %>% 
+  .[1:11] %>% 
+  as.character()
 
 # plot heatmap ------------------------------------------------------------
 
@@ -63,6 +67,7 @@ results %>%
   ) %>% 
   filter(!predictor %in% c("TAG", "TAA", "TGA")) %>% 
   inner_join(effects) %>% 
+  filter(predictor %in% top10) %>% 
   ggplot(aes(
     x = predictor,
     y = id,
@@ -79,7 +84,7 @@ results %>%
     axis.ticks.y = element_blank()
   ) +
   labs(x= NULL, y = NULL)
-ggsave("lasso-coefs.pdf", height = 2, width = 9.5)
+ggsave("lasso-coefs.pdf", height = 2, width = 4.3)
 
 
 

@@ -3,7 +3,7 @@ import joblib
 from optimalcodon.projects.rnastability.predictdecay import predict_sequence
 
 mdl = joblib.load("../191005-EvaluateModelLearningCurve/results-data/final_model.joblib")
-mdl_args = dict(specie="human", cell_type="293t", datatype='endogenous')
+mdl_args = dict(specie="human", cell_type="293t", datatype='slam-seq')
 silent_reporters = pd.read_csv('silent_reporters_seqs.csv').drop(['Unnamed: 0'], axis=1)
 
 # model prediction

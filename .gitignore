@@ -1,3 +1,6 @@
+# ignore some files
+*.fasta
+*.tab
 # ignore saved sklearn models
 *.joblib
 # History files
