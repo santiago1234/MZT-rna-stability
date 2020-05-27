@@ -33,7 +33,7 @@ This table contains 35,117 rows and 31 columns. Each row represents a gene.
 Columns description:
 
   + **Gene_ID ->** zebrafish ensembl gene id
-  + **Treatment_x|y_hrs|RNAseq_z** Here each column represents a single RNA-seq experiment containing the gene expression levels (Transcripts Per Million). The variables x, y, and z are placed holders:
+  + **Treatment_x-y_hrs-RNAseq_z** Here each column represents a single RNA-seq experiment containing the gene expression levels (Transcripts Per Million). The variables x, y, and z are placed holders:
     `x`: Some embryos were treated with [alpha-amanitin](https://en.wikipedia.org/wiki/Alpha-Amanitin) to inhibit zygotic transcription. This takes only two values: `aamanitin` which denotes alpha-amanitin treated embryos and `wt` which represents untreated embryos.
     `y`: time post fertilization (hours).
     `z`: RNA-seq method `ribo` for ribosomal-RNA depletion and `polya` for poly-A selection.
@@ -52,7 +52,7 @@ quantifications_rna <-
 quantifications_rna <- 
     quantifications_rna %>% 
     select(-is_maternal) %>% 
-    mutate(clname = paste0('Treatment_', treatment, '|', time, '_hrs|', 'RNAseq_', rna_seq_protocol)) %>% 
+    mutate(clname = paste0('Treatment_', treatment, '-', time, '_hrs-', 'RNAseq_', rna_seq_protocol)) %>% 
     select(-time, -treatment, -rna_seq_protocol) %>% 
     pivot_wider(names_from = clname, values_from = TPM)
 

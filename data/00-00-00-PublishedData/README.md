@@ -18,11 +18,11 @@ RNA-seq gene level quantifications. Raw sequencing data have been deposited in N
 Columns description:
 
 -   **Gene\_ID -&gt;** zebrafish ensembl gene id
--   **Treatment\_x|y\_hrs|RNAseq\_z** Here each column represents a single RNA-seq experiment containing the gene expression levels (Transcripts Per Million). The variables x, y, and z are placed holders: `x`: Some embryos were treated with [alpha-amanitin](https://en.wikipedia.org/wiki/Alpha-Amanitin) to inhibit zygotic transcription. This takes only two values: `aamanitin` which denotes alpha-amanitin treated embryos and `wt` which represents untreated embryos. `y`: time post fertilization (hours). `z`: RNA-seq method `ribo` for ribosomal-RNA depletion and `polya` for poly-A selection.
+-   **Treatment\_x-y\_hrs-RNAseq\_z** Here each column represents a single RNA-seq experiment containing the gene expression levels (Transcripts Per Million). The variables x, y, and z are placed holders: `x`: Some embryos were treated with [alpha-amanitin](https://en.wikipedia.org/wiki/Alpha-Amanitin) to inhibit zygotic transcription. This takes only two values: `aamanitin` which denotes alpha-amanitin treated embryos and `wt` which represents untreated embryos. `y`: time post fertilization (hours). `z`: RNA-seq method `ribo` for ribosomal-RNA depletion and `polya` for poly-A selection.
 
 A few rows and columns of the table are shown below:
 
-| Gene\_ID           |  Treatment\_wt|0\_hrs|RNAseq\_ribo|  Treatment\_wt|1\_hrs|RNAseq\_ribo|
+| Gene\_ID           |  Treatment\_wt-0\_hrs-RNAseq\_ribo|  Treatment\_wt-1\_hrs-RNAseq\_ribo|
 |:-------------------|----------------------------------:|----------------------------------:|
 | ENSDARG00000000001 |                              12.02|                              12.47|
 | ENSDARG00000000068 |                              52.57|                              48.97|
