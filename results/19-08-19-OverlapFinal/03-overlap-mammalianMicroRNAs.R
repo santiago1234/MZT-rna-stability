@@ -113,17 +113,43 @@ dtaplot %>%
 
 # minimalist plot ---------------------------------------------------------
 
+## get summary stats
+
+summary_expression <- 
+  dtaplot %>% 
+  mutate(optimality = str_c("q", optimality)) %>%
+  group_by(micro, targets, optimality) %>% 
+  summarise(
+    mediana = median(expression_level),
+    n = n()
+  )
+
+
 dtaplot %>% 
   mutate(optimality = str_c("q", optimality)) %>%
-  ggplot(aes(x=optimality, y=expression_level)) +
-  geom_sina(shape='.', alpha=.99) +
-  geom_rangeframe(sides = "l", color="black", alpha=2/3) +
+  ggplot(aes(x=optimality, y=expression_level, color=optimality)) +
+  geom_sina(shape=16, alpha=.99, size=1/10) +
+  geom_rangeframe(sides = "l", color="black", size=1/5) +
+  geom_errorbar(
+    data = summary_expression,
+    aes(ymin=mediana, ymax=mediana, y=mediana, x=optimality),
+    color="black",
+    size=1/5
+  ) +
+  geom_text(
+    data = summary_expression,
+    aes(x = optimality, y = 10**3.5, label = paste0("n=", n)),
+    color = "grey",
+    size=1
+  ) +
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
+  scale_color_manual(values = c("#ca0020", "#f4a582", "#92c5de", "#0571b0")) +
   facet_grid(~micro + targets) +
   labs(
     title = "mammalian microRNAs",
     y = "RNA level\nlog10 RPKM",
     x = "optimality level"
-  )
-ggsave("figures/mammalian_micros_minimal.pdf", height = 2.5, width = 4)
+  ) +
+  theme(legend.position = "none", axis.ticks = element_line(size = 1/5))
+ggsave("figures/mammalian_micros_minimal.pdf", height = 2, width = 4)

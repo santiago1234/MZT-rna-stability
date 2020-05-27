@@ -1,0 +1,97 @@
+---
+title: "RNA-leve effect"
+author: "Santiago Medina"
+date: "February 21, 2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+theme_set(theme_light())
+```
+
+Analysis at the RNA-level
+
+```{r}
+meternal_genes <- read_tsv("../../data/19-01-17-EMBO2016DATA/datasets/Half_life_Zebrafish.txt")$gene
+active_genes <- read_csv("../19-01-11-GetDecayRateFromTimeCourse/results_data/aamanitin_time_course_tidy_only_active_genes.csv")$Gene_ID %>% unique()
+
+maketidy <- function(data, .condition = NA) {
+  data %>% 
+    select(-Name) %>% 
+    gather(key = sample_name, value = TPM, -Gene_ID) %>% 
+    mutate(sample_name = str_replace(sample_name, "s_", "")) %>% 
+    separate(sample_name, into = c("condition", "time"), sep = "_") %>% 
+    mutate(time = as.numeric(str_replace(time, "h", ""))) %>% 
+    mutate(condition = .condition) %>% 
+    filter(
+      Gene_ID %in% meternal_genes, Gene_ID %in% active_genes,
+      time > 1, time %% 2 == 0
+    )
+}
+
+
+rna_ribo <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/ribo-zero-profile.csv") %>% 
+  maketidy(.condition = "wt_ribo")
+rna_poly <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/polyA-profile.csv") %>% 
+  maketidy(.condition = "wt_poly")
+rna_aa <- read_csv("../../data/19-01-09-RNAseqProfilesFish/rna-seq-profiles/alpha-amanitin-prolife.csv") %>% 
+  maketidy(.condition = "aa_poly") %>% 
+  filter(time %% 1 == 0)
+
+## load utrs and add k-mer counts
+
+utrs <- read_csv("../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/fish_seq_data_cds_3utr.csv") %>% 
+  select(-coding)
+
+kmers <- tribble(
+  ~kmer, ~effect,
+  "TCGGCG", "stable",
+  "CTCCCG", "stable",
+  "CCTGGG", "stable",
+  "AGACGG", "unstable",
+  "TCCGTA", "unstable",
+  "GCACTT", "MiR-430"
+)
+
+for (k in kmers$kmer) {
+  utrs[, k] <- str_detect(utrs$`3utr`, k)
+}
+
+utrs <-  select(utrs, -`3utr`) %>% rename(Gene_ID = ensembl_gene_id)
+
+x <- bind_rows(rna_ribo, rna_poly, rna_aa) %>% 
+  inner_join(utrs)
+```
+
+
+
+```{r expression_effect}
+plot_kmer <- function(.kmer, effect = "") {
+  x %>% 
+    group_by(condition, time) %>% 
+    mutate(TPM = as.numeric(scale(log(TPM + 1)))) %>% 
+    gather(key = kmer, value = presence, -Gene_ID, -condition, -time, -TPM) %>% 
+    filter(kmer == .kmer) %>% 
+    ggplot(aes(x=TPM, color = presence)) +
+    stat_ecdf(size = 1/4) +
+    ggthemes::scale_color_colorblind() +
+    facet_grid(condition~time) +
+    coord_cartesian(xlim = c(-2, 2)) +
+    labs(title = .kmer, subtitle = effect, x = "expression (standardized TPM)") +
+    theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 4))
+}
+
+map2(.x = kmers$kmer, .y = kmers$effect, .f = plot_kmer)
+
+```
+

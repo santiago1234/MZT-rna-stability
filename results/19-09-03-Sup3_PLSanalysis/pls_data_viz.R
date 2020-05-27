@@ -1,5 +1,6 @@
 library(tidyverse)
 library(ggthemes)
+library(ggpointdensity)
 
 theme_set(theme_tufte(base_family = "Helvetica"))
 
@@ -53,7 +54,7 @@ datum %>%
   labs(
     title = "Projection of codon content (64 vars) in two principal components"
   )
-ggsave("figures/PLS_decomposition.pdf", height = 2, width = 3)
+ggsave("figures/PLS_decomposition.pdf", height = 2, width = 2)
 
 datum %>% 
   select(PLS1, PLS2, percent) %>% 
@@ -68,7 +69,7 @@ datum %>%
     x = "% optimal codons (Bazzini et al 2016)",
     y = "component"
   )
-ggsave("figures/componentsVsOptPercent.pdf", height = 2, width = 6)
+ggsave("figures/componentsVsOptPercent.pdf", height = 2, width = 4)
 
 
 # compare to fc stabilit --------------------------------------------------
@@ -100,9 +101,11 @@ pls %>%
   select(PLS1, PLS2, decay_rate, specie) %>% 
   gather(key = component, value = val, -decay_rate, -specie) %>% 
   ggplot(aes(val, decay_rate)) +
-  geom_hex() +
-  scale_fill_gradient(low = "grey", high = "black") +
+  geom_point(shape='.', alpha=.99, size=1) +
   ggpubr::stat_cor(size=2) +
-  facet_grid(component~specie)
+  geom_rangeframe(size=1/5) +
+  scale_color_viridis_c(option = "E") +
+  facet_grid(.~component) +
+  theme(axis.ticks = element_line(size=1/5))
 
-ggsave("figures/componentsVsOutcome.pdf", height = 3, width = 6)
+ggsave("figures/componentsVsOutcome.pdf", height = 2, width = 3.5)

@@ -169,5 +169,8 @@ results2 %>%
     y = "model weight\n(weighting with the Bayesian bootstrap)"
   ) +
   theme(legend.position = "none")
+
+
+write_csv(results2, "results_data/weights_fish.csv")
 ```
 

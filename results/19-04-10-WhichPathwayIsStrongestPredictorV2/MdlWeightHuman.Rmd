@@ -1,0 +1,138 @@
+---
+title: "Human, Strongest Predictor?"
+author: "Santiago Medina"
+date: "5/13/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(brms)
+library(ggthemes)
+```
+
+## What is the strongest predictor in human?
+
+Pathwyas:
+
++ UTR len
++ m6a 
++ PLS (optimality)
+
+
+```{r}
+humandata <- read_csv("../19-05-13-OptimalityOverlapMouseHuman/results_data/pls_components_human.csv")
+
+m6Agenes <- read_csv("../19-05-13-OptimalityOverlapMouseHuman/results_data/mmc5.csv") %>% 
+  filter(Region == "3' UTR") %>% 
+  pull(Gene) %>% 
+  unique()
+
+mappings <- read_csv("../19-05-13-OptimalityOverlapMouseHuman/results_data/mappings_ensemble_id_to_gene_names.csv")
+
+m6a_targets <- mappings %>% 
+  mutate(m6a = Name %in% m6Agenes) %>% 
+  filter(m6a) %>% 
+  pull(gene_id)
+
+humandata <- read_csv("../19-05-13-OptimalityOverlapMouseHuman/results_data/pls_components_human.csv") %>% 
+  mutate(m6A = gene_id %in% m6a_targets)
+
+## get utr lens
+
+utrlen <- read_csv("../../data/19-04-29-AllDecayProfiles/decay_profiles_and_seqdata.csv") %>% 
+  filter(specie == "human", datatype != "orf-ome") %>%
+  select(gene_id, `3utr`) %>% 
+  distinct() %>% 
+  mutate(utrloglen = log(str_length(`3utr`) + 1)) %>% 
+  select(-`3utr`) %>% 
+  replace_na(list(utrloglen = median(.$utrloglen)))
+  ## replace missing with median
+
+humandata <- inner_join(utrlen, humandata)
+```
+
+I use the same strategy for model comparison as in fish data.
+
+```{r}
+get_mdl_weights_loo <- function(dta) {
+  x <- dta
+  # model formulas
+  fmlnull <- bf(decay_rate ~ 1)
+  fml0 <- bf(decay_rate ~ utrloglen)
+  fml1 <- bf(decay_rate ~ PLS1 + PLS2)
+  fml2 <- bf(decay_rate ~ m6A)
+  
+  fitnull <- brm(fmlnull, data = x, family = student(), chains = 1)
+  fit0 <- brm(fml0, data = x, family = student(), chains = 1)
+  fit1 <- brm(fml1, data = x, family = student(), chains = 1)
+  fit2 <- brm(fml2, data = x, family = student(), chains = 1)
+
+  
+  loonull <- loo(fitnull)
+  loo0 <- loo(fit0)
+  loo1 <- loo(fit1)
+  loo2 <- loo(fit2)
+  
+  loo_list <- list(null=loonull, utrloglen=loo0,optimality=loo1, m6A=loo2)
+  results <- loo_model_weights(loo_list)
+  
+  tibble(
+    model = names(results),
+    weights = as.vector(results)
+  )
+  
+}
+
+```
+
+
+
+```{r}
+results <- humandata %>% 
+  group_by(datatype, cell_type) %>% 
+  nest() %>% 
+  mutate(mw = map(data, get_mdl_weights_loo))
+```
+
+
+## results
+
+```{r model_comparison_human, fig.height=3, fig.width=4}
+mw <- 
+  tibble(
+  m6A = 0.207,
+  utrloglen = 1,
+  optimality = 1,
+  null = 0
+) %>% 
+  gather(key = model, value = fraction_genes) %>% 
+  inner_join(mw)
+
+mw %>% 
+  mutate(id = paste0(cell_type, " | ", datatype)) %>% 
+  ggplot(aes(x = fraction_genes, y = weights)) +
+  geom_point() +
+  
+mw_meidan <- mw %>% 
+  group_by(fraction_genes, model) %>% 
+  summarise(w = median(weights))
+
+mw %>% 
+  mutate(id = paste0(cell_type, " | ", datatype)) %>% 
+  ggplot(aes(x = fraction_genes, y = weights, color = id)) +
+  geom_point(shape=16, alpha=.7, position = "jitter") +
+  ggrepel::geom_text_repel(data = mw_meidan, aes(x = fraction_genes, y = w, label = model), color = "black") +
+  labs(
+    x = "proportion of genes potentially\nregulated by pathway",
+    y = "model weight\n(weighting with the Bayesian bootstrap)",
+    title = "Model Comparison in human data",
+    subtitle = "decay rate (Wu et al. 2019)"
+  ) +
+  scale_color_manual(values = c("#855C75","#D9AF6B","#AF6458","#736F4C","#526A83"))
+
+mw %>% write_csv("results_data/weights_human.csv")
+```
+
+

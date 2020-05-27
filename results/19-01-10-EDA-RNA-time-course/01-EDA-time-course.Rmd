@@ -65,8 +65,8 @@ visualize_pca_decomposition <- function(data, title = NULL) {
       y = str_c("PC2, ", pca_var_per[2], "%"),
       title = title
     ) +
-    #geom_rangeframe(color="black") +
-    theme(legend.position = "none")
+    geom_rug() +
+    theme(legend.position = "none", axis.ticks = element_blank())
   
 }
 
@@ -124,41 +124,43 @@ tc_d %>%
   filter(sample != "WT ribo") %>% 
   mutate(time = paste0(time, " hrs")) %>% 
   ggplot(aes(y = expression_wt, x = polyA_wt)) +
-  geom_hex(bins=20) +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon") +
+  scale_fill_gradient(low = "grey90", high = "black") +
+  facet_grid(. ~ time) +
   scale_y_continuous(trans = log2_trans(),
                      breaks = trans_breaks("log10", function(x) 10^x),
                      labels = trans_format("log10", math_format(10^.x))) +
   scale_x_continuous(trans = log2_trans(),
                      breaks = trans_breaks("log10", function(x) 10^x),
                      labels = trans_format("log10", math_format(10^.x))) +
-  scale_fill_gradient(low = "grey90", high = "black") +
-  facet_grid(. ~ time) +
   labs(
     y = "a-amanitin\nRNA level (TPM)",
     x = "wild type\nRNA level (TPM)"
   )
+
   
 ```
 
 ## poly/ribo over time
 
-```{r polyOverRiboRatio, fig.width=2, fig.height=2}
+```{r polyOverRiboRatio, fig.width=2.5, fig.height=5}
 dtidy %>% 
   filter(condition != "polyA_aamanitin", time %% 2 == 0) %>% 
   spread(key = condition, value = TPM) %>% 
   group_by(Gene_ID) %>% 
   mutate(log2fc = log2(polyA_wt / ribo_wt)) %>% 
   filter(!is.na(log2fc), !is.infinite(log2fc)) %>% 
-  ggplot(aes(x = log2fc, y = as.character(time), fill = ..x..)) +
-  geom_density_ridges_gradient(color="white") +
-  scale_fill_viridis_c(name = "log2\nfold change", option = "C") +
-  coord_cartesian(xlim = c(-5, 4)) +
+  mutate(time = str_c(time, " hrs")) %>% 
+  ggplot(aes(x = log2fc)) +
+  geom_histogram(bins=50, color="white", fill="grey50") +
+  geom_hline(yintercept = c(0, 1000, 2000, 3000), color="white", size=1/3) + 
+  scale_y_continuous(breaks = c(0, 1000, 2000, 3000)) +
+  facet_grid(time~.) +
+  coord_cartesian(xlim = c(-5, 5)) +
+  theme(axis.ticks = element_blank()) +
   labs(
-    y = "time hrs.",
     x = "log2 fold change",
-    title = "poly/ribo"
-  ) +
-  theme(legend.position = "none")
-
+    title = "poly(A) / ribo-zero"
+  )
 ```
 

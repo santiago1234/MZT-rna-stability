@@ -17,18 +17,77 @@ datum <-
   )
 
 
+## scale values by the median in each grp
+
+datum <- 
+  datum %>% 
+  group_by(UTR, Replicate) %>% 
+  mutate(value_scaled = as.numeric(scale(value)) )
+
+
 datum %>% 
-  ggplot(aes(x=miR, y=value, color=Optimality)) +
-  scale_y_log10() +
-  geom_sina(shape=16, size=1/2, alpha=.9) +
-  scale_color_manual(values = c("red", "blue")) +
-  geom_rug(sides="l") +
-  geom_rangeframe(size=1/5, color="black") +
-  scale_x_discrete(labels = c("no microRNA site", "microRNA site")) +
-  facet_grid(Replicate~UTR, scales="free_y") +
-  theme(legend.position = "none") +
+  filter(UTR != "weak seed") %>% 
+  mutate(
+    Optimality = factor(Optimality, levels = c("Non-optimal", "Optimal")),
+    miR = factor(miR) %>% fct_rev()
+  ) %>% 
+  ggplot(aes(x=Optimality, y=value_scaled, fill=Optimality)) +
+  geom_boxplot(size=1/5, outlier.shape = NA) +
+  facet_grid(miR~.) +
+  coord_flip() +
+  scale_fill_manual(values = c('blue', 'red')) +
+  geom_rangeframe(size = 1/7, color="black", sides = "b") +
   labs(
-    y = "log10 intensity\nmCherry/GFP",
+    y = "mCherry/GFP (scaled)",
     x = NULL
-  )
-ggsave("figures/majo_res.pdf", width = 3.5, height = 3)
+  ) +
+  theme(legend.position = 'none', axis.ticks.y = element_blank())
+ggsave("figures/majo_res_scaled-STRONG.pdf", height = 1.5, width = 2.5)
+
+datum %>% 
+  filter(UTR == "weak seed") %>% 
+  mutate(
+    Optimality = factor(Optimality, levels = c("Non-optimal", "Optimal")),
+    miR = factor(miR) %>% fct_rev()
+  ) %>% 
+  ggplot(aes(x=Optimality, y=value_scaled, fill=Optimality)) +
+  geom_boxplot(size=1/5, outlier.shape = NA) +
+  facet_grid(miR~.) +
+  coord_flip() +
+  scale_fill_manual(values = c('blue', 'red')) +
+  geom_rangeframe(size = 1/7, color="black", sides = "b") +
+  labs(
+    y = "mCherry/GFP (scaled)",
+    x = NULL
+  ) +
+  theme(legend.position = 'none', axis.ticks.y = element_blank())
+ggsave("figures/majo_res_scaled-WEAK.pdf", height = 1.5, width = 2.5)
+
+# get pvalues and stats ---------------------------------------------------
+
+
+
+# Get-PVALUES
+# micro-RNA effect
+datum %>% 
+  group_by(miR, UTR) %>% 
+  nest() %>% 
+  mutate(
+    fit = map(data, ~t.test(value_scaled ~ Optimality, data = .)),
+    tidy = map(fit, broom::tidy)
+  ) %>% 
+  unnest(tidy) %>% 
+  select(p.value)
+
+
+datum %>% 
+  group_by(UTR) %>% 
+  nest() %>% 
+  mutate(
+    fit = map(data, ~t.test(value_scaled ~ miR, data = .)),
+    tidy = map(fit, broom::tidy)
+  ) %>% 
+  unnest(tidy) %>% 
+  select(p.value)
+
+

@@ -87,16 +87,18 @@ datum <-
 
 p <- datum %>% 
   sample_frac(1) %>% 
+  filter(grp != "neutral") %>% 
   ggplot(aes(x=predicted, y=log2FC, color = grp)) +
-  geom_point(shape = 16, alpha = .7, size = 1) +
-  scale_color_manual(values = c("forestgreen", "grey", "blue", "red")) +
+  geom_point(shape = 16, alpha = .99, size = 1) +
+  scale_color_manual(values = c("#4daf4a", "#377eb8", "#e41a1c")) +
   ggpubr::stat_cor(color = "black") +
   labs(
     x = "predicted mRNA stability",
     y = "log2 fold change\n(6hrs \ 3hrs)"
   )
 
-pdf("preds_mzt.pdf", width = 5.5, height = 4)
+
+pdf("preds_mzt.pdf", width = 6, height = 4)
 ggMarginal(p, groupColour = TRUE)
 dev.off()
 
@@ -177,11 +179,12 @@ datum %>%
   sample_frac(1) %>% 
   filter(grp != "neutral") %>% 
   mutate(grp = factor(grp, levels = c("optimal", "non-optimal", "miR-430"))) %>% 
-  ggplot(aes(x=predicted, y=log2FC, color = grp, shape=grp)) +
-  geom_point(alpha = .99, size = 1) +
-  scale_color_grey() +
+  ggplot(aes(x=predicted, y=log2FC, color = grp)) +
+  geom_point(alpha = .79, size = 1, shape=16) +
+  scale_color_manual(values = c("black", "grey", "steelblue")) +
   coord_cartesian(ylim = c(-6, 3)) +
   theme(legend.position = "none")
+
 
 ggsave("test_minaml.pdf", width = 5, height = 2.5)
  

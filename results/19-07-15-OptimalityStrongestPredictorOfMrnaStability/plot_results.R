@@ -109,3 +109,29 @@ mdlw %>%
 
 ggsave("model_comparison_minimal.pdf", width = 8, height = 2)
 
+
+# make the plot only for MZT data -----------------------------------------
+
+xenopus <- read_csv("results_data/mdl_weights_xenopus.csv") %>% 
+  mutate(fraction = c(1, .2265)) %>% 
+  mutate(specie = "Xenopus")
+
+plot_mzt <- 
+  xenopus %>% 
+  bind_rows(mdlw) %>% 
+  filter(specie %in% c("Xenopus", "fish"))
+
+
+plot_mzt %>% 
+  ggplot(aes(x=fraction, y=weights, color=model)) +
+  geom_point(shape=16, alpha=.9) +
+  scale_y_continuous(breaks = c(0, .2, .4, .6, .8)) +
+  geom_rangeframe(color = 'black') +
+  geom_rug(sides="l", size = 1/5, color = 'black') +
+  scale_color_manual(values = c("#EEB422", "#228B22", "#FF0000")) +
+  ggrepel::geom_text_repel(aes(label=model)) +
+  facet_wrap(~specie) +
+  theme(legend.position = "none") +
+  labs(y = "model weights\n(Bayesian bootstrap)", x="fraction of coding genes with potential regulation")
+
+ggsave("model_mzt.pdf", width = 4, height = 2)

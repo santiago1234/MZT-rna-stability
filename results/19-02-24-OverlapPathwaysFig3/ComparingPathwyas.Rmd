@@ -1,0 +1,183 @@
+---
+title: "Regulatory Pathways"
+author: "Santiago Medina"
+date: "2/24/2019"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/fig3_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+theme_set(theme_light())
+```
+
+
+Rationale: miR430 and m6A have been proposed as strong regulatory pathways, therefore we want to see if codon optimality overlaps with them and compare the strength.
+
+A)	Boxplot decay for each time point (take top optimal, top non-optimal based on my EMBO code) for All, m6A, miR430 and none miR430 nor m6a (Santi)
+
+```{r load_data}
+pathways <- read_csv("results_data/regulatory_pathways_matrix.csv")
+log2fc <- read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv")
+```
+
+I can do the boxplot, but i will take a shortcut and go straight to the answer.
+
+```{r comparingModels, fig.width=5, fig.height=7}
+dpths <- log2fc %>% 
+  filter(time > 3, time %% 1 == 0) %>% 
+  inner_join(pathways)
+
+fml <- as.formula("log2FC ~ PLS1 + PLS2")
+
+fit_mdl_to_pathway <- function(fml) {
+  # fits a model to each time point and sample_condition
+  dpths %>% 
+    filter(is_maternal) %>% 
+    filter(!is.infinite(log2FC)) %>% 
+    group_by(time, sample_condition) %>% 
+    nest() %>% 
+    mutate(
+      fit = map(data, ~lm(as.formula(fml), data = .)),
+      glc = map(fit, broom::glance)
+    ) %>% 
+    select(-data, -fit) %>% 
+    unnest(glc)
+}
+
+
+  
+mdls_df <- tibble(
+  formulas = c(
+    "log2FC ~ PLS1 + PLS2",
+    "log2FC ~ m6A",
+    "log2FC ~ MiR430",
+    "log2FC ~ stable_TCGGCG + stable_CTCCCG + stable_CCTGGG + unstable_AGACGG + unstable_TCCGTA",
+    "log2FC ~ MiR430 + m6A + PLS1 + PLS2 + stable_TCGGCG + stable_CTCCCG + stable_CCTGGG + unstable_AGACGG + unstable_TCCGTA"
+  ),
+  mdl = c(
+    "optimality",
+    "m6A",
+    "MiR430",
+    "candidate reg k-mer",
+    "full_mdl"
+  )
+)
+
+
+# order mdls by r score
+
+results <- 
+  mdls_df %>% 
+  mutate(glc = map(formulas, fit_mdl_to_pathway)) %>% 
+  unnest(glc)
+
+order_mdls <- 
+  results %>% 
+  filter(sample_condition != "aamanitin_polya") %>% 
+  group_by(mdl) %>% 
+  summarise(r2 = mean(adj.r.squared)) %>% 
+  arrange(r2) %>% 
+  pull(mdl)
+
+results %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  mutate(mdl = factor(mdl, levels = order_mdls)) %>% 
+  ggplot(aes(x = mdl, y = adj.r.squared, color = mdl)) +
+  geom_errorbar(aes(ymin = 0, ymax = adj.r.squared), width = 1/5) +
+  geom_point() +
+  geom_point(shape=1, color = "black") +
+  facet_grid(time ~ sample_condition) + 
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  scale_y_continuous(labels = scales::percent) + 
+  ggthemes::scale_color_colorblind() +
+  #scale_color_manual(values = c("black", "steelblue")) +
+  labs(
+    x = NULL,
+    y = "Explained Variance R2",
+    title = "Regulatory Pathways during MZT",
+    subtitle = "log2 fold change ~ pathway"
+  ) +
+  theme(legend.position = "none")
+
+```
+
+```{r otherdataVAr, fig.height=3, fig.width=7.5}
+# TODO: add m6a mutant log2FC
+
+fc_other <- read_csv("../../../rna-stability-model/experiments/18-03-29-TestKmersInRNAseqData/results/rnasamples_and_utrs.csv") %>% 
+  select(-seq) %>% 
+  rename(Gene_ID = gene_id)
+
+
+fit_mdl_2data <- function(fml) {
+  fc_other %>% 
+    gather(key = "sample_condition", value = "log2FC", -Gene_ID) %>% 
+    inner_join(pathways) %>% 
+    group_by(sample_condition) %>% 
+    nest() %>% 
+    mutate(
+      fit = map(data, ~lm(fml, data = .)),
+      glc = map(fit, broom::glance)
+    ) %>% 
+    select(-data, -fit) %>% 
+    unnest(glc)
+  
+}
+
+mdls_df %>% 
+  mutate(mdl = factor(mdl, levels = order_mdls)) %>% 
+  mutate(glc = map(formulas, fit_mdl_2data)) %>% 
+  unnest(glc) %>% 
+  ggplot(aes(x = mdl, y = adj.r.squared, color = mdl)) +
+  geom_point() +
+  geom_point(shape=1, color = "black") +
+  geom_errorbar(aes(ymin = 0, ymax = adj.r.squared), width = 1/5) +
+  scale_y_continuous(labels = scales::percent) + 
+  ggthemes::scale_color_colorblind() +
+  facet_grid(~sample_condition) +
+  labs(
+    x = NULL,
+    y = "Explained Variance R2",
+    title = "Regulatory Pathways during MZT"
+  ) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 70, hjust = 1))
+  geom_point()
+```
+
+
+## Is there overlap berween the pathways?
+
+
+```{r overlaps, fig.width=3, fig.height=7}
+dpths %>% 
+  filter(is_maternal) %>% 
+  filter(!is.infinite(log2FC)) %>% 
+  mutate(MiR430 = MiR430 > 0) %>% 
+  filter(sample_condition == "wt_ribo", is_maternal) %>% 
+  select(log2FC, time, m6A, MiR430, PLS1, PLS2) %>% 
+  gather(key = pathway, value = in_pathway, -time, -log2FC, -PLS1, -PLS2) %>% 
+  filter(in_pathway) %>% 
+  ggplot(aes(x=PLS1, y = log2FC, color = PLS2)) +
+  geom_point(shape = ".") +
+  ggpubr::stat_cor(size = 2) +
+  geom_smooth(method = "lm", color = "black", size = 1/2) +
+  scale_color_viridis_c() +
+  facet_grid(time ~ pathway) +
+  labs(
+    title = "Do pathways overlap?", subtitle = "codon optimality affects\nm6A and MiR430 targets",
+    y = "ribo log2 Fold Change"
+  ) +
+  theme(legend.position = "none")
+
+```
+

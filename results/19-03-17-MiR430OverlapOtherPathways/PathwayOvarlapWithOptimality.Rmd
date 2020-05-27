@@ -33,6 +33,7 @@ I will define optimal/non-optimal genes in the following way:
 + top 1k lowest PLS1 (non-optimal)
 + top 1k highest PLS1 (optimal)
 
+
 ```{r getdata}
 log2fc <- read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv")
 
@@ -64,23 +65,25 @@ dataf1 <- inner_join(log2fc, pathwasy) %>%
 ```
 
 
-```{r 3ApathwayOverlap, fig.height=5, fig.width=4}
+```{r 3ApathwayOverlap, fig.height=5, fig.width=3.5}
 dataf1 %>% 
   filter(sample_condition == "wt_ribo") %>% 
-  mutate(MiR430 = MiR430>0) %>% 
+  mutate(
+    MiR430 = MiR430>0,
+    optimality = factor(optimality, levels = c("optimal", "neutral", "nonoptimal"))
+  ) %>% 
   select(log2FC, time, m6A, MiR430, optimality) %>% 
   gather(key = pathway, value = present, -time, -log2FC, -optimality) %>% 
   filter(present) %>% 
-  ggplot(aes(x=log2FC, color=optimality)) +
+  ggplot(aes(y=log2FC, x=optimality, color=optimality)) +
   geom_rangeframe(color="black") +
-  stat_ecdf(size=1/4) +
+  geom_boxplot(outlier.shape = NA) +
   facet_grid(time ~ pathway) +
-  scale_color_manual(values = c("#888888", "#6699CC", "#661100")) +
-  scale_y_continuous(breaks = c(.2, .5, .7)) +
-  coord_cartesian(xlim = c(-6, 1)) +
+  scale_color_manual(values = c("red", "#888888", "blue")) +
+  coord_cartesian(ylim = c(-6.5, 1.5)) +
   labs(
-    x = "log2 Fold Change (6hrs/2hrs)",
-    y= "Cumulative Density",
+    y = "log2 Fold Change (6hrs/2hrs)",
+    x= NULL,
     title = "Optimality Overlaps with other Pathways"
   )
 ```
@@ -119,5 +122,61 @@ dpb %>%
   ) +
   geom_rangeframe(color = "black", alpha = 1/3)
 ``` 
+
+
+### Do the plot focusing only in MiR-430 targets
+
+```{r mir430MA, fig.height=7, fig.width=4}
+# see the readme file in that folder for a description of the data
+mir430codes <- read_csv("../../data/19-01-17-EMBO2016DATA/datasets/Groups/mir430_genes_targets.csv") %>% 
+  rename(Gene_ID = gene_id)
+optimality <- 
+  select(predictors, Gene_ID, PLS1, is_maternal)
+
+
+mir430codes <- 
+  mir430codes %>% 
+  right_join(optimality) %>% 
+  replace_na(list(kmer_type = "no target", MicroArray = "No"))
+
+dta_plot <- inner_join(log2fc, mir430codes) %>% 
+  filter(is_maternal, sample_condition == "wt_ribo") %>% 
+  mutate(time = paste0(time, " hrs"))
+
+dta_plot %>% 
+  mutate(
+    MicroArray = factor(MicroArray, levels = c("No", "Ma", "Ma78"))
+  ) %>% 
+  filter(time > 4) %>% 
+  ggplot(aes(x=PLS1, y=log2FC, color=MicroArray)) +
+  geom_point(size = .25, alpha=1/2) +
+  geom_rangeframe(color="black") +
+  ggpubr::stat_cor(color="black", size = 2) +
+  facet_grid(time~MicroArray) +
+  geom_smooth(method = "lm") +
+  labs(
+    title="MiR-430 MA",
+    x = "codon optimality (PLS1)"
+  )
+```
+
+
+```{r MiR430KmerOverlaps, fig.height=7, fig.width=4}
+dta_plot %>% 
+  mutate(
+    kmer_type = factor(kmer_type, levels = c('no target', "6-mer", '7-mer', '8-mer', 'm-mer'))
+  ) %>% 
+  filter(time > 4) %>% 
+  ggplot(aes(x=PLS1, y=log2FC)) +
+  geom_point(color = "grey", size = .25, alpha=1/2) +
+  geom_rangeframe() +
+  ggpubr::stat_cor(color="black", size = 2) +
+  facet_grid(time~kmer_type) +
+  geom_smooth(method = "lm") +
+  labs(
+    x = "codon optimality (PLS1)",
+    y = "log2 X hrs / 2 hrs"
+  )
+```
 
 

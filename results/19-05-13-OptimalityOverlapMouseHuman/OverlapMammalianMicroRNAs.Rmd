@@ -1,0 +1,188 @@
+---
+title: "Overlap Mammalian micro-RNAs"
+author: "Santiago Medina"
+date: "5/13/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(ggthemes)
+library(gridExtra)
+
+theme_set(theme_tufte())
+```
+
+```{r}
+quantifications <- read_csv("../../data/19-05-08-MammalianMircroRNAs/rna-seq-quants-mammlian-micro-rnas.csv")
+
+micro_rnas <- read_csv("../../data/19-05-08-MammalianMircroRNAs/mircro_rnas_tidy.csv")
+
+pls <- read_csv("results_data/pls_components_human.csv") %>% 
+  filter(cell_type == "hela")
+```
+
+Can you see the optimality effect at homeostasis?
+
+```{r optimality_in_homeostasis, fig.height=7, fig.width=2.5}
+quantifications %>% 
+  inner_join(pls) %>% 
+  select(gene_id, sample_name, expression_level, PLS1:PLS2) %>% 
+  gather(key = component,value = val, -gene_id, -expression_level, -sample_name) %>% 
+  sample_n(10000) %>% 
+  ggplot(aes(x=val, y=log(expression_level))) +
+  geom_point(shape=16, alpha = .1) +
+  geom_rangeframe() +
+  facet_grid(sample_name~component) +
+  ggpubr::stat_cor(size=3, color="red") +
+  geom_smooth(method = "lm")
+
+```
+
+
+
+good!!, component 2 captures the variation in the mRNA level. (we decomvoluted the effect)
+
+## MiR-155
+
+add Mir-430 information to the data.
+
+```{r fig.height=6, fig.width=3.5}
+# mir-155
+mapping <- function(x) {
+  if (x > 1) return(">= 2 sites")
+  if (x == 1) return("1 site")
+  else return("0 sites")
+}
+
+# get the data
+
+mir155 <- quantifications %>% 
+  filter(
+    sample_name %in% c("mrna_mir155_32hr", "mrna_mir155_12hr", "mrna_mock_32hr", "mrna_mock_12hr")
+  ) %>% 
+  left_join(filter(micro_rnas, `Representative miRNA` == "hsa-miR-155-5p")) %>% 
+  replace_na(list(`Conserved sites total` = 0)) %>% 
+  inner_join(pls) %>% 
+  mutate(`Conserved sites total` = map_chr(`Conserved sites total`, mapping),
+         `Conserved sites total` = factor(`Conserved sites total`, levels = c(
+           "0 sites", "1 site", ">= 2 sites")),
+         sample_name = str_replace(sample_name, "mrna_", "")
+         )
+
+
+mir1 <- quantifications %>% 
+  filter(
+    sample_name %in% c("mrna_mir1_12hr", "mrna_mir1_32hr", "mrna_mock_32hr", "mrna_mock_12hr")
+  ) %>% 
+  left_join(filter(micro_rnas, `Representative miRNA` != "hsa-miR-155-5p")) %>% 
+  replace_na(list(`Conserved sites total` = 0)) %>% 
+  inner_join(pls) %>% 
+  mutate(`Conserved sites total` = map_chr(`Conserved sites total`, mapping),
+         `Conserved sites total` = factor(`Conserved sites total`, levels = c(
+           "0 sites", "1 site", ">= 2 sites")),
+         sample_name = str_replace(sample_name, "mrna_", "")
+  )
+```
+do you see the micro rna effect?
+
+this is to show that I have the rigth data.
+
+```{r mireffect, fig.height=2.5, fig.width=5}
+mir155 %>% 
+  ggplot(aes(x = log(expression_level), color=`Conserved sites total`)) +
+  stat_ecdf() +
+  facet_grid(.~sample_name) +
+  scale_color_colorblind() +
+  theme(legend.position = "bottom") +
+  labs(title = "mir155")
+
+mir1 %>% 
+  ggplot(aes(x = log(expression_level), color=`Conserved sites total`)) +
+  stat_ecdf() +
+  facet_grid(.~sample_name) +
+  scale_color_colorblind() +
+  theme(legend.position = "bottom") +
+  labs(title = "mir1")
+```
+
+
+```{r HumanMircroRNAsBoxplot, fig.height=6, fig.width=6}
+make_boxplot <- function(data, mytitle) {
+  data %>% 
+    group_by(`Conserved sites total`, sample_name) %>% 
+    mutate(
+      optimality = ntile(PLS2, n = 4)
+    ) %>% 
+    ggplot(aes(
+      x = optimality,
+      y = log(expression_level),
+      group=optimality,
+      fill = optimality
+    )
+    ) +
+    geom_boxplot(outlier.shape = NA, size=1/4) +
+    facet_grid(sample_name~`Conserved sites total`) +
+    geom_rangeframe(alpha = 1/2) +
+    scale_fill_gradient2(low="steelblue", high = "red", mid = "grey", midpoint = 2.5) +
+    coord_cartesian(ylim = c(0, 7)) +
+    labs(
+      y = NULL,
+      title = mytitle,
+      x = "codon optimality"
+    ) +
+    theme(
+      legend.position = "none"
+    )
+  
+}
+
+
+pmir1 <- make_boxplot(mir1, "miR-1")
+
+pmir155 <- make_boxplot(mir155, "miR-155")
+  
+grid.arrange(pmir1, pmir155, nrow=1, bottom="Guo et al, 2010 Nature",
+             left = "log RNA level (RPKM)",
+             top = "Codon Optimality Overlaps with Mammalian MicroRNAs")
+```
+
+great!!
+
+scater plots
+
+```{r HumanMircroRNAsScatter, fig.height=6, fig.width=7.5}
+make_scaterr <- function(data, mytitle) {
+  data %>% 
+    filter(PLS2 > -9, log(expression_level) < 7) %>% 
+    ggplot(aes(x = PLS2, y = log(expression_level))) +
+    geom_point(color = "grey", shape=16, alpha=1/2) +
+    geom_rangeframe(alpha=1/5) +
+    ggpubr::stat_cor(color = "blue", size=2, method="spearman") +
+    coord_cartesian(ylim = c(0, 7), xlim = c(-9, 6)) +
+    scale_x_continuous(breaks = c(-5, 0, 2.5)) +
+    geom_smooth(method = "lm", color="black") +
+    facet_grid(sample_name ~`Conserved sites total`) +
+    labs(
+      x = "optimality",
+      y = NULL,
+      title = mytitle
+    )
+  
+}
+
+psmir1 <- make_scaterr(mir1, "miR-1")
+psmir155 <- make_scaterr(mir155, "miR-155")
+
+grid.arrange(psmir1, psmir155, nrow=1, bottom="Guo et al, 2010 Nature",
+             left = "log RNA level (RPKM)",
+             top = "Codon Optimality Overlaps with Mammalian MicroRNAs")
+```
+

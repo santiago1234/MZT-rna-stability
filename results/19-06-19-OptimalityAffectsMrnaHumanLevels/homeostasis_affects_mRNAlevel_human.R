@@ -92,9 +92,9 @@ fit %>%
   facet_grid(~cell_type, scales = "free_x") +
   scale_x_continuous(breaks = c(3, 5, 7)) +
   labs(
-    title = "Codon Optimality Affects Homeostasis mRNA level in human cells",
+    title = "Codon Optimality Affects Homeostasis mRNA level",
     x = "expected mRNA level based on predicted decay",
     subtitle = "test data",
     y= "mRNA expression\nRPKM"
   )
-ggsave("homeostasis_mrna_level_human.pdf", width = 7, height = 2)
+ggsave("homeostasis_mrna_level_human.pdf", width = 5, height = 2)

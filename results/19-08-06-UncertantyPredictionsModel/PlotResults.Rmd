@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(ggthemes)
 library(gridExtra)
+library(ggpointdensity)
 
 theme_set(theme_tufte(base_family = "Helvetica"))
 ```
@@ -28,19 +29,20 @@ theme_set(theme_tufte(base_family = "Helvetica"))
 ## Test Data 
 
 
-```{r testdata, fig.height=3, fig.width=4}
+```{r testdata, fig.height=3, fig.width=5}
 testdata <- read_csv("results_data/prediction_interavals_test_data.csv")
 
 testdata %>% 
-  ggplot(aes(x=median_prediction, y=y_observed)) + 
-  stat_density_2d(aes(fill = ..level..), geom = "polygon") +
-  scale_fill_continuous(low="grey90", high="black") +
-  labs(
-    x = "predicted mRNA stability\n(scaled decay rate)",
-    y = "observed mRNA stability\n(scaled decay rate)"
-  ) +
+  ggplot(aes(x=median_prediction, y=y_observed)) +
+  geom_pointdensity(shape=16, alpha=.99, size=1) +
+  scale_color_viridis_c(option = "E") +
   scale_x_continuous(breaks = c(-1, 0, 1)) +
-  scale_y_continuous(breaks = c(-1, 0, 1))
+  scale_y_continuous(breaks = c(-2, 0, 2)) +
+  labs(
+    x = "predicted mRNA stability",
+    y = "observed mRNA stability"
+  )
+
 ```
 
 
@@ -90,11 +92,15 @@ testdata %>%
     id = paste(id, "\nn = ", n)
   ) %>% 
   ggplot(aes(x=median_prediction, y=y_observed)) +
-  geom_hex() +
-  scale_fill_continuous(low="grey80", high="black") +
-  facet_grid(~id) +
+  geom_pointdensity(shape=16, alpha=.99, size=1) +
   geom_rangeframe(sides="b", alpha=2/3) +
-  ggpubr::stat_cor(size=2) 
+  ggpubr::stat_cor(size=2) +
+  scale_color_viridis_c(option = "E") +
+  facet_grid(~id) +
+  labs(
+    x = "predicted mRNA stability\n(scaled decay rate)",
+    y = "observed mRNA stability\n(scaled decay rate)"
+  )
 ```
 
 

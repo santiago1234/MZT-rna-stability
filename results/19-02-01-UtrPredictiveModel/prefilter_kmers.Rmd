@@ -1,0 +1,66 @@
+---
+title: "PreFilter k-mers"
+author: "Santiago Medina"
+date: "2/4/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(broom)
+library(ggthemes)
+library(parallel)
+theme_set(theme_light())
+```
+
+The goal of the notebook is to identify potentiall regulatory k-mers to built a predictive model.
+In this notebook I will pre-filter bassed on having a marginal effect on the decay rate data.
+
+
+```{r data}
+utrs <- read_csv("../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/zfish_3utr6mer_composition.csv") %>% 
+  rename(Gene_ID = ensembl_gene_id)
+
+data <- codonr::load_decay_aa_codon_composition_data(
+  "../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/zfish_codon_composition.csv",
+  "../19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv"
+) %>% 
+  select(Gene_ID, decay_rate) %>% 
+  inner_join(utrs) %>% 
+  select(-Gene_ID, -`3utr`)
+```
+
+
+```{r}
+fit <- lm(decay_rate ~ ., data = data)
+results <- tidy(fit)
+results %>% 
+  filter(term != "(Intercept)") %>% 
+  ggplot(aes(estimate, -log10(p.value), color = estimate)) +
+  geom_point() +
+  scale_color_viridis_c(option = "G") +
+  geom_hline(yintercept = -log10(0.1))
+```
+
+```{r candidates}
+filtered <- 
+  results %>% 
+  filter(term != "(Intercept)") %>% 
+  filter(p.value < 0.05)
+
+utrs %>% 
+  select()
+
+utrs[, c("Gene_ID", colnames(utrs)[colnames(utrs) %in% filtered$term])] %>% 
+  write_csv("results_data/top_kmers.csv")
+```
+
+
+

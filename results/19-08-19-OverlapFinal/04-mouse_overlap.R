@@ -58,12 +58,34 @@ data %>%
 
 # minimalist plot ---------------------------------------------------------
 
+summary_stability <- 
+  data %>% 
+  mutate(optimality = str_c("q", optimality)) %>%
+  group_by(pathway, target, optimality) %>% 
+  summarise(
+    mediana = median(decay_rate),
+    n = n()
+  )
+
 
 data %>% 
   mutate(optimality = str_c("q", optimality)) %>% 
-  ggplot(aes(x=optimality, y=decay_rate)) +
-  geom_sina(shape='.', alpha=.99) +
-  geom_rangeframe(sides = "l", color="black", alpha=2/3) +
+  ggplot(aes(x=optimality, y=decay_rate, color=optimality)) +
+  geom_sina(shape=16, alpha=.99, size=1/4) +
+  geom_rangeframe(sides = "l", color="black", size=1/5) +
+  geom_errorbar(
+    data = summary_stability,
+    aes(ymin=mediana, ymax=mediana, y=mediana, x=optimality),
+    color="black",
+    size=1/7
+  ) +
+  geom_text(
+    data = summary_stability,
+    aes(x = optimality, y = 2, label = paste0("n=", n)),
+    color = "grey",
+    size=1
+  ) +
+  scale_color_manual(values = c("#ca0020", "#f4a582", "#92c5de", "#0571b0")) +
   facet_grid(~pathway + target) +
   theme(
     legend.position = "none"
@@ -73,4 +95,5 @@ data %>%
     title = "combinatorial code in mESCs",
     x = NULL
   )
-ggsave("figures/mouse_minimal.pdf", height = 2, width = 4)
+ggsave("figures/mouse_minimal.pdf", height = 2, width = 5)
+

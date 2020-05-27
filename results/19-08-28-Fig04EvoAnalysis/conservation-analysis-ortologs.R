@@ -109,11 +109,11 @@ datos_plot <- convined_datos %>%
 
 medianas <- datos_plot %>% 
   group_by(group) %>% 
-  summarise(mediana = median(optimality_ratio_fish))
+  summarise(mediana = median(PLS1_fish))
 
 
 datos_plot %>% 
-  ggplot(aes(x=reorder(group, optimality_ratio_fish, mean), y=optimality_ratio_fish, fill=group)) +
+  ggplot(aes(x=reorder(group, PLS1_fish, mean), y=PLS1_fish, fill=group)) +
   ggforce::geom_sina(aes(color=group), shape=21, alpha=.99, seed=3, color="black") +
   geom_rangeframe(size=1/4) +
   scale_fill_viridis_d(option = "A") +
@@ -127,7 +127,12 @@ datos_plot %>%
   theme_tufte(base_family = "Helvetica") +
   theme(legend.position = "none")
 
-
-
 ggsave("figures/05-analysis-orthologs-conserved-miR430-type.pdf", height = 3.5, width = 4.5)
+
+
+# statistics --------------------------------------------------------------
+
+
+datos_plot$TEST <- datos_plot$group == "target in both"
+aov(PLS1_fish ~ TEST, data = datos_plot) %>% summary()
 

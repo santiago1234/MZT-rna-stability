@@ -54,6 +54,11 @@ dp_median <-
   summarise(median_pls = median(PLS1)) %>% 
   filter(!is.na(median_pls))
 
+# get the size of each plot
+ns_in_data <- 
+  datum_plot %>% 
+  count(specie, reg) %>% 
+  mutate(etiqueta = paste0("n = ", n))
 
 
 datum_plot %>% 

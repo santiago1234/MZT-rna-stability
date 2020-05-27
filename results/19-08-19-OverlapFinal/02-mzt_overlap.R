@@ -73,24 +73,101 @@ data <-
   mutate(optimality = ntile(-PLS1, 4)) %>% 
   ungroup()
 
-data %>% 
-  filter(optimality %in% c(1, 4)) %>% # plot the extreme quantiles
-  ggplot(aes(x=target, y=log2FC, color=as.character(optimality))) +
-  geom_sina(size=1/5, shape=16, alpha=.99) +
-  geom_rangeframe(sides="l", color="black", alpha=2/3) +
-  scale_x_discrete(labels = c("targets", "no targets")) +
-  scale_color_manual(values = c("red", "blue")) +
-  facet_grid(pathway~specie) +
-  labs(
-    title = "combinatorial code MZT",
-    y = "log2 fold change\n late stage (fish = 6 hrs, xenopus = 9 hrs) / 2 hrs"
-  ) +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 30, hjust = 1)
+
+
+data <- data %>% 
+  mutate(optimality = str_c("q", optimality))
+
+# mir-430 sites -----------------------------------------------------------
+
+mir430_data <- data %>% 
+  filter(pathway == "miR430")
+
+### get summary stats for number of points and median values
+
+summary_mir430 <- mir430_data %>% 
+  group_by(specie, target, optimality) %>% 
+  summarise(
+    mediana = median(log2FC),
+    n = n()
   )
 
-ggsave("figures/mzt_overlap.pdf", width = 4, height = 4)
+mir430_data %>% 
+  ggplot(aes(x=optimality, y=log2FC, color=optimality)) +
+  geom_sina(shape=16, alpha=.99, size=1/4) +
+  geom_rangeframe(color="black", size=1/5, sides = "l") +
+  geom_errorbar(
+    data = summary_mir430,
+    aes(ymin=mediana, ymax=mediana, y=mediana, x=optimality),
+    color="black",
+    size=1/5
+  ) +
+  geom_text(
+    data = summary_mir430,
+    aes(x = optimality, y = 4.5, label = paste0("n=", n)),
+    color = "grey",
+    size=2
+  ) +
+  scale_y_continuous(breaks = c(-4, 0, 4)) +
+  scale_color_manual(values = c("#ca0020", "#f4a582", "#92c5de", "#0571b0")) +
+  facet_grid(specie ~ target) +
+  coord_cartesian(ylim = c(-5, 5)) +
+  labs(
+    title = "combinatorial code optimality and miR-430, MZT",
+    y = "log2 fold change\n late stage (fish = 6 hrs, xenopus = 9 hrs) / 2 hrs",
+    x = "codon optimality level"
+  ) +
+  theme(legend.position = "none", axis.ticks = element_line(size=1/5))
+
+ggsave("figures/mzt_mir430_overlap.pdf", height = 3.5, width = 4)
+
+
+# overlap m6a regulation --------------------------------------------------
+m6a_data <- data %>% 
+  filter(pathway == "m6A")
+
+### get summary stats for number of points and median values
+
+summary_m6a <- m6a_data %>% 
+  group_by(specie, target, optimality) %>% 
+  summarise(
+    mediana = median(log2FC),
+    n = n()
+  )
+
+m6a_data %>% 
+  ggplot(aes(x=optimality, y=log2FC, color=optimality)) +
+  geom_sina(shape=16, alpha=.99, size=1/4) +
+  geom_rangeframe(color="black", size=1/5, sides = "l") +
+  geom_errorbar(
+    data = summary_m6a,
+    aes(ymin=mediana, ymax=mediana, y=mediana, x=optimality),
+    color="black",
+    size=1/5
+  ) +
+  geom_text(
+    data = summary_m6a,
+    aes(x = optimality, y = 4.5, label = paste0("n=", n)),
+    color = "grey",
+    size=2
+  ) +
+  scale_y_continuous(breaks = c(-4, 0, 4)) +
+  scale_color_manual(values = c("#ca0020", "#f4a582", "#92c5de", "#0571b0")) +
+  facet_grid(. ~ target) +
+  coord_cartesian(ylim = c(-5, 5)) +
+  labs(
+    title = "combinatorial code optimality and m6A, MZT",
+    y = "log2 fold change (6hrs / 2hrs)",
+    x = "codon optimality level"
+  ) +
+  theme(legend.position = "none", axis.ticks = element_line(size=1/5))
+
+ggsave("figures/mzt_m6a_overlap.pdf", height = 2.5, width = 4)
+
+
+
+# linear model p-value ----------------------------------------------------
+
 data %>% 
   group_by(specie, pathway, target) %>% 
   nest() %>% 
@@ -100,18 +177,3 @@ data %>%
   ) %>% 
   unnest(tf) %>% 
   filter(term == "PLS1")
-
-
-data %>% 
-  mutate(optimality = str_c("q", optimality)) %>% 
-  ggplot(aes(x=optimality, y=log2FC)) +
-  geom_sina(shape='.', alpha=.99) +
-  geom_rangeframe() +
-  facet_grid(specie~pathway + target) +
-  labs(
-    title = "combinatorial code MZT",
-    y = "log2 fold change\n late stage (fish = 6 hrs, xenopus = 9 hrs) / 2 hrs",
-    x = "codon optimality level"
-  )
-
-ggsave("figures/mzt_overlap_minimal.pdf", width = 4, height = 4)

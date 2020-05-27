@@ -1,0 +1,123 @@
+---
+title: "Which genes can't be predicted?"
+author: "Santiago Medina"
+date: "6/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(UpSetR)
+library(ggthemes)
+res <- read_csv("results_data/predictions_results.csv")
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+
+```{r}
+polya <- res %>% 
+  select(Gene_ID, PLS1, PLS2, MiR430, m6A, wt_polya, predicitions_polyA, utr_log) %>% 
+  mutate(condition = "polyA") %>% 
+  rename(observed = wt_polya, predicted = predicitions_polyA)
+
+ribo <- res %>% 
+  select(Gene_ID, PLS1, PLS2, MiR430, m6A, wt_ribo, predictions_ribo, utr_log) %>% 
+  mutate(condition = "ribo0") %>% 
+  rename(observed = wt_ribo, predicted = predictions_ribo)
+
+data <- bind_rows(polya, ribo)
+```
+
+
+```{r}
+data %>% 
+  ggplot(aes(predicted, observed)) +
+  geom_point() +
+  geom_abline(linetype=2, color="grey") +
+  ggpubr::stat_cor() +
+  facet_grid(~condition)
+```
+
+```{r}
+data <- data %>% 
+  mutate(
+    .resid = observed - predicted
+  ) %>% 
+  group_by(condition) %>% 
+  mutate(
+    outlier = (.resid < (quantile(.resid)[2]  - 1.5 * IQR(.resid))) | (.resid > (quantile(.resid)[4]  + 1.5 * IQR(.resid)))
+ )
+
+
+data %>% 
+  ggplot(aes(x=.resid, y=observed, color=outlier)) +
+  geom_point() +
+  facet_grid(~condition) +
+  scale_color_manual(values = c("black", "purple")) 
+```
+
+compute the outliers
+
+```{r}
+data %>% 
+  ggplot(aes(predicted, observed, color = outlier)) +
+  geom_point() +
+  geom_abline(linetype=3, color="grey") +
+  scale_color_manual(values = c("black", "purple")) +
+  facet_grid(~condition) +
+  labs(title = "all genes")
+
+```
+
+```{r}
+data %>% 
+  filter(MiR430 == 0, m6A == 0) %>% 
+  ggplot(aes(predicted, observed, color = outlier)) +
+  geom_point(alpha=.7, shape=16) +
+  geom_abline(linetype=3, color="grey") +
+  scale_color_manual(values = c("black", "purple")) +
+  facet_grid(~condition) +
+  labs(
+    title = "no miR-430 and no m6A genes"
+  )
+```
+
+intersection
+
+```{r}
+outlier_list <- list(
+  poly_A = filter(data, condition == "polyA", outlier)$Gene_ID,
+  ribo = filter(data, condition == "ribo0", outlier)$Gene_ID
+)
+
+upset(fromList(outlier_list), order.by = "freq")
+```
+
+intersection no MiR-430 or m6A
+
+```{r}
+outlier_list <- list(
+  poly_A = filter(data, condition == "polyA", outlier, MiR430 == 0, m6A == 0)$Gene_ID,
+  ribo = filter(data, condition == "ribo0", outlier, MiR430 == 0, m6A == 0)$Gene_ID
+)
+
+upset(fromList(outlier_list), order.by = "freq")
+```
+
+```{r}
+data %>% 
+  filter(outlier, MiR430 == 0, m6A == 0) %>% 
+  ggplot(aes(x=.resid, y = PLS1, color=observed, size = utr_log)) +
+  geom_point() +
+  scale_color_viridis_c(option = "A") +
+  facet_grid(~condition)
+```
+

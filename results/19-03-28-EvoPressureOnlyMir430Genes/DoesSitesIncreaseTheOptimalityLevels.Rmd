@@ -1,0 +1,46 @@
+---
+title: "Evolutionary Pressure in MiR-430 genes"
+author: "Santiago Medina"
+date: "3/28/2019"
+output: html_document
+---
+
+### Overview
+
+How optimality looks as a function of the number of MiR-430 sites in the 3' UTR.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+# load the data
+
+predictors <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv")
+
+dta <- predictors %>% 
+  filter(is_maternal) %>% # keep only the maternal genes
+  select(Gene_ID, MiR430, PLS1, PLS2)
+
+head(dta)
+```
+
+how many mir genes do we have?
+
+```{r}
+dta %>% 
+  ggplot(aes(MiR430)) +
+  geom_bar() +
+  scale_y_log10()
+```
+
+```{r}
+dta %>% 
+  ggplot(aes(x=MiR430, y=PLS1, group=MiR430)) +
+  geom_point(position = "jitter") +
+  geom_boxplot()
+```
+
+```{r}
+lm(PLS1 ~ MiR430, data = dta) %>% summary()
+```
+

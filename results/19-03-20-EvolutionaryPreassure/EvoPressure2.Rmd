@@ -1,0 +1,403 @@
+---
+title: "Evolutionary Preassure"
+author: "Santiago Medina"
+date: "5/28/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/evo2_", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+library(tidyverse)
+library(ggthemes)
+library(ggridges)
+library(brms)
+
+theme_set(theme_tufte(base_family = "Helvetica"))
+```
+
+Hypothesis: *If a gene is going for decay and it is optimal then the probability of observing a miR-430 site should increase*
+
+
+To consider:
+
+I need to take into account the length of the 3' UTR. Longer 3' UTRs have more chances of containing miR-430 sites.
+
+I will define a mIR-430 site as the presence of the most common mIR-430 6-mer.
+
+```{r}
+variables <- read_csv("../19-02-24-OverlapPathwaysFig3/results_data/regulatory_pathways_matrix.csv") %>% 
+  filter(is_maternal) %>% # only consider maternal genes
+  select(Gene_ID:MiR430, PLS1, PLS2)
+
+# get the 3' UTR length
+
+utrlen <- read_csv("../../data/19-01-17-Get-ORFS-UTRS-codon-composition/sequence-data/fish_seq_data_cds_3utr.csv") %>% 
+  mutate(utrlen = str_length(`3utr`)) %>% 
+  select(ensembl_gene_id, utrlen) %>% 
+  rename(Gene_ID = ensembl_gene_id)
+
+# here we have the list of predictors
+variables <- inner_join(variables, utrlen)
+
+# obtain the log2FC at 6hrs for poly and ribo
+
+log2 <- read_csv("../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv") %>% 
+  filter(time == 6, sample_condition != "aamanitin_polya", is_maternal) %>% 
+  select(Gene_ID, log2FC, sample_condition)
+
+full_data <- inner_join(variables, log2)
+
+data <- filter(full_data, sample_condition == "wt_ribo")
+```
+
+Response distribution
+
+```{r eda}
+data %>% 
+  ggplot(aes(x=MiR430)) +
+  geom_bar() +
+  scale_x_continuous(breaks = 0:6) +
+  labs(
+    x = "miR-430 sites in 3' UTR"
+  )
+
+data %>% 
+  filter(utrlen > 30) %>% 
+  ggplot(aes(x=utrlen, y=as.character(MiR430), fill = ..x..)) +
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+  scale_x_log10() +
+  geom_rangeframe() +
+  scale_fill_viridis_c() +
+  labs(
+    y = "miR-430 sites",
+    title = "genes with several miR-430 sites have longer UTR"
+  )
+
+data %>% 
+  ggplot(aes(x=PLS1, y=PLS2, color=log2FC)) +
+  geom_point() +
+  geom_rangeframe(color="black") +
+  scale_color_viridis_c(option = "A")
+```
+
+## models
+
+
+model1:
+
+let $y$ denote the number of miR-430 sites in the 3' UTR. Assume $y \sim Binomial(n, p)$
+
+Define $n = \frac{\text{3' utr length}}{100}$ hence p is the probability of observing a mIR-430 site on a window of a 100
+nucleotides.
+
+Firt I estiate the probability of observing a MiR-430 site.
+
+```{r}
+data <- data %>% 
+  mutate(n = round(utrlen / 100) + 1)
+
+m1 <- brm(data = data, family = binomial,
+      MiR430 | trials(utrlen) ~ 1,
+      prior(normal(0, 10), class = Intercept),
+      seed = 10, cores = 2, chains = 2)
+```
+
+```{r}
+posterior_samples(m1) %>% 
+  as_tibble() %>% 
+  mutate(p = boot::inv.logit(b_Intercept)) %>% 
+  ggplot(aes(p)) +
+  geom_density(fill="grey", color=NA) +
+  labs(
+    title = "probability of observing a miR-430 site\nin a window of 100 nucleotides"
+  )
+```
+
+
+## model 2
+
+$$
+logit(p) = \alpha + \beta\;log2
+$$
+
+
+```{r}
+m2 <- brm(data = data, family = binomial,
+      MiR430 | trials(utrlen) ~ 1 + log2FC,
+      prior(normal(0, 10), class = Intercept),
+      seed = 10, cores = 2, chains = 2)
+
+m3 <- brm(data = data, family = binomial,
+      MiR430 | trials(utrlen) ~ 1 + PLS1 + PLS2,
+      prior(normal(0, 10), class = Intercept),
+      seed = 10, cores = 2, chains = 2)
+
+m4 <- brm(data = data, family = binomial,
+      MiR430 | trials(utrlen) ~ 1 + PLS1 + PLS2 + log2FC,
+      prior(normal(0, 10), class = Intercept),
+      seed = 10, cores = 2, chains = 2)
+
+
+```
+
+## model comparison
+
+I have three models.
+
+```{r}
+m1 <- add_criterion(m1, "waic")
+m2 <- add_criterion(m2, "waic")
+m3 <- add_criterion(m3, "waic")
+m4 <- add_criterion(m4, "waic")
+
+w <- loo_compare(m1, m2, m3, m4, criterion = "waic")
+
+print(w, simplify = F)
+
+w %>%
+  data.frame() %>% 
+  rownames_to_column(var = "model") %>% 
+   ggplot() +
+  geom_pointrange(aes(x = reorder(model, -waic), y = waic,
+                      ymin = waic - se_waic,
+                      ymax = waic + se_waic,
+                      color = model),
+                  shape = 16) +
+  coord_flip() +
+  labs(x = NULL, y = NULL,
+       title = "WAIC") +
+  scale_color_colorblind() +
+  theme(axis.ticks.y    = element_blank(),
+        legend.position = "none")
+```
+
+## model weigths
+
+```{r}
+model_weights(m1, m2, m3, m4,
+              weights = "waic") %>% 
+  round(4)
+```
+
+There is evidence supporting the hypothesis.
+
+
+## model parameters
+
+from now I will focus in m4.
+
+```{r params}
+p2 <- m2 %>% 
+  posterior_samples() %>% 
+  as_tibble() %>% 
+  select(-lp__) %>% 
+  gather() %>% 
+  mutate(mdl = "m2")
+
+p3 <- m3 %>% 
+  posterior_samples() %>% 
+  as_tibble() %>% 
+  select(-lp__) %>% 
+  gather() %>% 
+  mutate(mdl = "m3")
+
+p4 <- m4 %>% 
+  posterior_samples() %>% 
+  as_tibble() %>% 
+  select(-lp__) %>% 
+  gather() %>% 
+  mutate(mdl = "m4")
+
+bind_rows(p2, p3, p4) %>% 
+  filter(key != "b_Intercept") %>% 
+  ggplot(aes(x=value, y=key)) +
+  geom_vline(xintercept = 0, linetype=3) +
+  geom_density_ridges(color=NA) +
+  geom_rangeframe() +
+  facet_grid(mdl~.) +
+  labs(
+    y = "parameter"
+  )
+
+```
+
+model 4 is given by 
+
+The following model will be used to evaluate our hypothesis.
+
+
+$$
+\begin{aligned}
+\text{miR-430} &\sim \text{Binomial}(n=\text{utr length}, p = p_i) \\
+logit(p_i) &= \alpha_ + \beta_1\text{ fold change} + \beta_2PLS_1 + \beta_3PLS_2 
+\end{aligned}
+$$
+
+
+## posterior predictive checks
+```{r posterior_implications, fig.height=2.5, fig.width=6}
+opt <- tibble(
+  PLS1 = seq(from=-6, to=6, length.out = 100),
+  PLS2 = seq(from=-6, to=6, length.out = 100)
+)
+
+ndta <- tibble(log2FC = c(-5, -3, -1, 0, 1, 3, 5)) %>% 
+  crossing(opt) 
+
+x <- fitted(m4, newdata = mutate(ndta, utrlen=median(data$utrlen)), type="link") %>% 
+  as_tibble() %>% 
+  bind_cols(ndta)
+
+x %>% 
+  ggplot(aes(x=PLS2,y=Estimate)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=Q2.5, ymax=Q97.5), fill="grey", alpha=1/3) +
+  geom_line(aes(y=Q2.5), linetype=2, alpha=1/2) +
+  geom_line(aes(y=Q97.5), linetype=2, alpha=1/2) +
+  geom_rangeframe() +
+  scale_x_continuous(breaks = c(-4, 0, 4)) +
+  geom_line(aes(y=)) +
+  facet_grid(~log2FC) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(
+    x = "optimality",
+    y = "probability",
+    title = "Probability of miR-430 for the median 3' UTR length (800 bp)",
+    subtitle = "mRNA stability (log2 Fold Change 6hrs/3hrs)"
+  )
+  
+
+```
+
+
+
+
+## M6A
+
+let's evaluate the same hypothesis but now using the m6A methylation as the response. For this model I
+assume UTR length does not have an effect.
+
+the model
+
+$$
+\begin{aligned}
+\text{miR-430} &\sim \text{Bernoulli}(p = p_i) \\
+logit(p_i) &= \alpha_ + \beta_1\text{ fold change} + \beta_2PLS_1 + \beta_3PLS_2 
+\end{aligned}
+$$
+
+```{r}
+data <- mutate(data, m6A = as.numeric(m6A))
+mdl_m6a <- brm(
+  data = data, 
+  family = bernoulli, m6A ~ 1 + PLS1 + PLS2 + log2FC,
+  prior = prior(normal(0, 10), class = Intercept),
+  seed = 10, cores = 2, chains = 2    
+)
+```
+
+parameters
+
+```{r m6a_model_paramters}
+mdl_m6a %>% 
+  posterior_samples() %>% 
+  as_tibble() %>% 
+  select(-lp__, -b_Intercept) %>% 
+  gather() %>% 
+  ggplot(aes(x=value, y=key)) +
+  geom_density_ridges(color=NA) +
+  geom_vline(xintercept = 0) +
+  labs(title = "m6A model parameters")
+```
+
+```{r posterior_implications_m6a, fig.height=2.5, fig.width=6}
+x <- fitted(mdl_m6a, newdata = ndta, type="link") %>% 
+  as_tibble() %>% 
+  bind_cols(ndta)
+
+x %>% 
+  ggplot(aes(x=PLS2,y=Estimate)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=Q2.5, ymax=Q97.5), fill="grey", alpha=1/3) +
+  geom_line(aes(y=Q2.5), linetype=2, alpha=1/2) +
+  geom_line(aes(y=Q97.5), linetype=2, alpha=1/2) +
+  geom_rangeframe() +
+  scale_x_continuous(breaks = c(-4, 0, 4)) +
+  geom_line(aes(y=)) +
+  facet_grid(~log2FC) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(
+    x = "optimality",
+    y = "p",
+    title = "Probability of m6A",
+    subtitle = "mRNA stability (log2 Fold Change 6hrs/3hrs)"
+  )
+```
+
+
+```{r m6a_dummies_result, fig.width=2, fig.height=3}
+data %>% 
+  filter(log2FC < -3) %>% 
+  ggplot(aes(x=m6A, y=PLS1, group=m6A)) +
+  geom_boxplot(fill="grey", outlier.shape = NA) +
+  scale_x_continuous(breaks = c(0, 1), labels = c("no targets", "targets")) +
+  labs(
+    subtitle = 'unstable genes\nlog2 fold change < -3',
+    y = "optimality (PLS1)"
+  )
+```
+## Predictive Surfaces
+
+
+```{r pred_surface, fig.width=4, fig.height=2}
+to_preidct <- tibble(log2FC = seq(-5, 5, length.out = 100)) %>% 
+  crossing(opt) 
+
+preds_mir430 <- predict(m4, newdata = mutate(to_preidct, utrlen=median(data$utrlen)), type="link") %>% 
+  as_tibble() %>% 
+  bind_cols(to_preidct) %>% 
+  mutate(
+    mdl = "miR-430"
+  )
+
+preds_m6a <- predict(mdl_m6a, newdata = to_preidct, type="link") %>% # no utr length
+  as_tibble() %>% 
+  bind_cols(to_preidct) %>% 
+  mutate(
+    mdl = "m6A"
+  )
+
+to_preidct <- 
+  bind_rows(preds_m6a, preds_mir430) %>% 
+  mutate(
+    Estimate = map_dbl(Estimate, ~if_else(. > 1, 1, .)),
+    opt_bin = ntile(PLS1, n=100),
+    log2_bin = ntile(log2FC, n=100),
+    
+  )
+
+to_preidct %>% 
+  ggplot(aes(x=opt_bin, y=log2_bin, fill=Estimate)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "A") +
+  scale_x_continuous(breaks = c(20, 80), labels = c("-", "+"), expand = c(0, 0)) +
+  scale_y_continuous(breaks = c(20, 80), labels = c("-", "+"), expand = c(0, 0)) +
+  labs(
+    y = "mRNA stability",
+    fill = "probability",
+    x = "optimality level"
+  ) +
+  facet_grid(~mdl)
+```
+
+
+```{r}
+sessionInfo()
+```
+
