@@ -1,0 +1,241 @@
+---
+title: The crosstalk between codon optimality and 3' UTR cis-elements dictates mRNA
+  stability
+author: Santiago Gerardo Medina, Gopal Kushawah, María José Blanco Salazar, Ariel
+  A Bazzini
+date: "5/26/2020"
+output:
+  github_document: default
+  html_document:
+    df_print: paged
+---
+
+# Published data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, echo=FALSE)
+library(tidyverse)
+
+set.seed(42)
+```
+
+A short description of the generated data accompanying this publication.
+
+***
+
+## **Table 1**:  zebrafish RNA-seq time course during MZT
+
+
+RNA-seq gene level quantifications. 
+Raw sequencing data have been deposited in NCBI Gene Expression Omnibus  [GSE148391](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE148391).
+This table contains 35,117 rows and 31 columns. Each row represents a gene.
+
+Columns description:
+
+  + **Gene_ID ->** zebrafish ensembl gene id
+  + **Treatment_x|y_hrs|RNAseq_z** Here each column represents a single RNA-seq experiment containing the gene expression levels (Transcripts Per Million). The variables x, y, and z are placed holders:
+    `x`: Some embryos were treated with [alpha-amanitin](https://en.wikipedia.org/wiki/Alpha-Amanitin) to inhibit zygotic transcription. This takes only two values: `aamanitin` which denotes alpha-amanitin treated embryos and `wt` which represents untreated embryos.
+    `y`: time post fertilization (hours).
+    `z`: RNA-seq method `ribo` for ribosomal-RNA depletion and `polya` for poly-A selection.
+
+  A few rows and columns of the table are shown below:
+
+```{r table1}
+quantifications_rna <- read_csv('../19-01-09-RNAseqProfilesFish/rna-seq-profiles/RNAseq_tidytimecourse.csv')
+
+quantifications_rna <- 
+  quantifications_rna %>% 
+  separate(sample_condition, sep = '_', into = c('treatment', 'rna_seq_protocol'))
+
+# make data wider format to save disk sapace
+
+quantifications_rna <- 
+    quantifications_rna %>% 
+    select(-is_maternal) %>% 
+    mutate(clname = paste0('Treatment_', treatment, '|', time, '_hrs|', 'RNAseq_', rna_seq_protocol)) %>% 
+    select(-time, -treatment, -rna_seq_protocol) %>% 
+    pivot_wider(names_from = clname, values_from = TPM)
+
+
+head(quantifications_rna[, c(1,2, 3)]) %>% 
+  sample_n(5) %>% 
+  knitr::kable(caption = 'Table 1')
+
+write_csv(quantifications_rna, 'table1.csv')
+```
+
+***
+
+## **Table 2**:  mRNA stability during MZT
+
+Messenger RNA degradation rates estimated from the alpha-amanitin time course. For additional information see the paper's methods section: *"Estimation of mRNA stability"*.
+
+
+95% confidence interval lower limit
+Columns description:
+
+  + **Gene_ID ->** zebrafish ensembl gene id.
+  + **decay_rate ->** estimated decay rate, negative values indicate unstable genes and positive values stable genes.
+  + **std.error ->** standard error of the estimate.
+  + **conf.low ->** lower limit 95% confidence interval.
+  + **conf.high ->** upper limit 95% confidence interval.
+
+A few rows of the table are shown below:
+
+```{r table2}
+decay_mzt <- read_csv('../../results/19-01-11-GetDecayRateFromTimeCourse/results_data/estimated_decay_rates.csv')
+
+# the beta param is the decay rate
+# alpha is the expression at time 0
+decay_mzt <- 
+  decay_mzt %>% 
+  filter(term == 'beta') %>% 
+  select(-term, -statistic, -p.value) %>% 
+  rename(decay_rate = estimate)
+
+head(decay_mzt) %>% 
+  knitr::kable(caption = 'Table 2')
+
+write_csv(decay_mzt, 'table2.csv')
+```
+
+***
+
+## **Table 3**:  Training/testing data to train machine learning predictor of mRNA stability
+
+Data that was used to train and evaluate machine learning preditor model. This table contains 75,351 rows and 8 columns.
+
+Columns description:
+
+  + **gene_id ->** ensembl gene id.
+  + **specie ->** specie vertebrate (human = *H. sapiens*, fish = *D. rerio*, mouse = 	*M. musculus*, and xenopus =  *X. tropicalis*).
+  + **cell_type ->** cell type from where mRNA stability measurements were derived.
+  + **datatype ->** How where mRNA stability mesurements generated?:
+    + `endogenous` Actinomycin D was used to block transcription
+    + `aamanitin ribo` embryos treated with alpha-amanitin (RNA-seq ribosomal-RNA depletion)
+    + `aamanitin polya` embryos treated with alpha-amanitin (RNA-seq poly-A selection)
+    + `slam-seq` SLAM-seq.
+  + **decay_rate ->** mRNA degradation rates (see the note below).
+  + **utrlenlog ->** 3' UTR length log-transformed.
+  + **cdslenlog ->** cds length log-transformed.
+  + **allocation ->** this variable denotes wether the given observations was used for training or for testing (validation). Note: the same gene-id is never in training or testing simultaneously.
+
+  
+Notes:
+
+- The mRNA degradation rates in this table were standardized (mean = 0 and standard deviation = 1). The next table below shows the mean and standard deviations of the original data. By applying the inverse transform, the values in the original scale can be recovered.
+- This table is missing the codon composition (codon frequencies). Codons frequencies were computed, for each gene, from the longest coding isoform sequence.
+
+
+```{r}
+means_and_sds <- read_csv('../../results/19-04-30-PredictiveModelDecayAllSpecies/19-04-30-EDA/results_data/mean_std_of_decayrates_for_each_DataSet.csv')
+knitr::kable(means_and_sds, caption = 'means and strandar deviations')
+```
+
+
+
+Decay rates, for the given specie, were obtained from the following publications:
+
+  * zebrafish: This study; AA Bazzini, F del Viso, MA Moreno‐Mateos… - The EMBO journal, 2016.
+  * human: Q Wu, SG Medina, G Kushawah, ML DeVore… - Elife, 2019.
+  * xenopus: AA Bazzini, F del Viso, MA Moreno‐Mateos… - The EMBO journal, 2016.
+  * mouse: VA Herzog, B Reichholf, T Neumann, P Rescheneder… - Nature …, 2017.
+  
+A few rows of the table are shown below excluding the `coding` column:
+  
+
+```{r table3}
+training <- mutate(optimalcodonR::training, allocation = 'training')
+testing <- mutate(optimalcodonR::testing, allocation = 'testing')
+
+stopifnot(sum(unique(testing$gene_id) %in% unique(training$gene_id)) == 0)
+
+ml_data <- bind_rows(training, testing) %>% 
+  select(-coding)
+
+ml_data %>% 
+  select(gene_id, specie, cell_type, datatype, decay_rate, utrlenlog, cdslenlog, allocation) %>% 
+  slice(1:100) %>% 
+  sample_n(5) %>% 
+  knitr::kable(caption = 'Table 3')
+
+write_csv(ml_data, 'table3.csv')
+```
+
+***
+
+## **Table 4**: Predictions and residual values during MZT for zebrafish and xenopus.
+
+This data is part of **Fig. 2** (see paper). This table contains the codon predicted stability for zebrafish and xenopus during MZT. This table contains 10,668 rows and 4 columns.
+
+Columns description:
+
+  + **gene_id ->**: ensembl gene id, the genes here are maternally deposited.
+  + **specie ->**: either zebrafish or xenopus.
+  + **residual ->**: residual values, values close to zero indicate that the model predicts well the stability and large values that the model is far from the observed value. The residual is the difference between observed and predicted mRNA stability.
+
+
+A few rows of the table are shown below:
+
+```{r table4} 
+resid <- read_csv('../../paper-analysis/191010-PredictStabilityInMZT/results-data/mzt_predictionsResidualsLog2Fc.csv')
+
+resid <- 
+  resid %>% 
+  select(gene_id, specie, predicted, resid) %>% 
+  rename(residual = resid)
+
+resid %>% 
+  sample_n(5) %>% 
+  knitr::kable(caption = 'Table 4')
+
+write_csv(resid, 'table4.csv')
+```
+
+## **Table 5**: Gene level mesurements of codon optimality.
+
+See the methods section “Measuring codon optimality at the gene level” and Additional file Figure S3. This table contains numerical measurements of codon optimality in some endogenous genes, we have generated two such measurements PLS1 and PLS2, positive values are associated with enrichment in optimal codons (stabilizing codon) and negative values with enrichment in non-optimal codons (destabilizing codon).
+
+This table contains 57,627 rows and 4 columns.
+
+Columns description:
+
+  + **gene_id ->**: ensembl gene id.
+  + **PLS1 ->** measurement 1 of codon optimality
+  + **PLS2 ->** measurement 2 of codon optimality
+  + **specie ->** vertebrate (human, mouse, xenopus, or zebrafish).
+
+```{r table5}
+optimality <- read_csv('../../results/19-08-19-OverlapFinal/results_data/pls_species.csv')
+
+optimality %>% 
+  sample_n(5) %>% 
+  knitr::kable(caption = 'Table 5')
+
+write_csv(optimality, 'table5.csv')
+```
+
+***
+
+## Reporters sequences
+
+Bewlow you can find the coding and 3' UTR sequences that were used to clone the reporter genes used in **Fig. 4e** and **Figure S4e**.
+
+#### Coding
+
+Optimal sequence: *GACATCTTTGGCTTTGAGAACTTTGAGGTCAACCGCTTTGAGCAGTTCAACATTAACTATGCAAACGAGAAGCTTCAGGAGTATTTCAACAAGCACATTTTCTCACTGGAGCAGCTTGAGTTCAGGAAGGTGCAGCATGAGCTGGAGGAGGCTCAGGAGAGAGCTGACATCGCCGAGTCCCAGGTCAACAAGCTCAGAGCTAAAAGCCGTGAATTTGGAAAGGGTAAAGAGGCTGAGGAGGCTGACTCCTTCGACTATAAGAGCTTCTTCGCCAAGGTTGGGCTGTCCGCCAAGACTCCTGATGACATCAAGAAGGCTTTTGCTGTCATTGACCAGGACAAGAGCGGCTTCATTGAGGAGGATGTGGAGGACTCCCTCTGTGAGGCCAAAGAGCTGTTCATCAAGACAGTCAAGCACTTCGGTGAGGACGCTGATAAGATGCAGCCTGATGAGTTCTTTGGGATTTTCGACCAGTTCTTGCGTATCCCCAAGGAGCAGGGCTTCCTGTCGTTCTGGAGAGGAAACTTGGCCAACGTCATCAGATACTTCCCCACACAGGCCCTCAACTTTGCTTTCAAGGACAAGTACAAGAAGGTCTTCGACATCACAGACAAGCTGGAGAACGAGCTGGCCAATAAGGAGGCTTTCCTCAGACAGATGGAGGAGAAGAACAGGCAGTTGCAGGAGCGGCTTGAGTTGGCAGAGCAGAAGCTCCAGCAG*
+
+Non-optimal sequence: *ACATCTTTGGCTTTGAGAACTTTGAGGTCAACCGCTTTGAGCAGTTCAACATTAACTATGCAAACGAGAAGCTTCAGGAGTATTTCAACAAGCACATTTTCTCACTGGAGCAGCTTGAGTTCAGGAAGGTGCAGCATGAGCTGGAGGAGGCTCAGGAGAGAGCTGACATCGCCGAGTCCCAGGTCAACAAGCTCAGAGCTAAAAGCCGTGAATTTGGAAAGGGTAAAGAGGCTGAGGAGGCTGACTCCTTCGACTATAAGAGCTTCTTCGCCAAGGTTGGGCTGTCCGCCAAGACTCCTGATGACATCAAGAAGGCTTTTGCTGTCATTGACCAGGACAAGAGCGGCTTCATTGAGGAGGATGTGGAGGACTCCCTCTGTGAGGCCAAAGAGCTGTTCATCAAGACAGTCAAGCACTTCGGTGAGGACGCTGATAAGATGCAGCCTGATGAGTTCTTTGGGATTTTCGACCAGTTCTTGCGTATCCCCAAGGAGCAGGGCTTCCTGTCGTTCTGGAGAGGAAACTTGGCCAACGTCATCAGATACTTCCCCACACAGGCCCTCAACTTTGCTTTCAAGGACAAGTACAAGAAGGTCTTCGACATCACAGACAAGCTGGAGAACGAGCTGGCCAATAAGGAGGCTTTCCTCAGACAGATGGAGGAGAAGAACAGGCAGTTGCAGGAGCGGCTTGAGTTGGCAGAGCAGAAGCTCCAGCAGG*
+
+#### 3' UTRs
+
+3' UTR weak seeds. This UTR was used in **Figure S4e**. This UTR contains a 6-mer and a 7-mer:
+
+_CTTCCACCAATAGAGGAACTAGGAAACAACCAATGGGCTCTGATAAATCAGAGGAAAGGTGAAGAGAAAAAAAACCTGTGCTGCCACAATACCCCGAGAGTGCATGGAATAGTTACACATTAAACAACTGTGAAGAAGAGAGACACAGTTAGAACAAATACAGTATCCAAAAC_**GCACTT**_CTTACATTC_**AGCACTT**_GCAGTTTTCGTTTTACTTCATTATTTTGAAATAATAACAGTAGACACAACTTCAGCCATATGCGCTTACTTTGCAcCCAATAATCCGTTTTCATAAAGAACGACTTACATTTTATGTTTTAATAACTTGTTAATTGTATTATGGGAACAGATTATATGGTCTGTTATTAATGGCTCTTACTAATAAATGTGTCAATTGAATTATTGGCTGTTTTT_
+
+
+3' UTR strong seeds. This UTR was used in **Fig. 4e**. This UTR contains two 7-mers and an 8-mer:
+
+_TGATCCAACGTGGAGTTCTCGCATCTTGAAATGTCCAAATATATTATCATTATTATTTTCCCTCTTCATTTGCTCTTCAACGAAAGGTGAACAGGTGGAACGATATTTATTTTTCTAGTCTGTAATTTTCTGCTGAAAGTATTTTTTTGTGTGTATGTTAAAACAAATGTGGAGAGGTTTCAAAGACCAAACGATTGGCTGACGAAGACGAATATCTTCCTAATAATCGATGAATGAAACTATAAATCAGGTGAAAATGAACTGGCGGAGTTTCGAGATGAGTTATG_**AGCACTT**_CTGAGGGTGTTACCAGCGTGAAATGAAGCCAGTGCAGCCCAGCTGTCTTAAGTCCCACACAAAAACT_**GCACTTA**_ACTG_**AGCACTTA**_AAAAGAAAAACATATTTGACCACAACAGTCGAAGCAGTTTCCAAAATTTAGGAAAGACTTTTAATTTATTTTTCAGTATTCTGCTAACTTAAAAGGCCATCATGTGTTGTGTGTATGTGACATGTGCCATTACCTCTGCTGTGGCACCTTTTCCTTCTCAGGTAAAATCTGCTTATATTTGTACTT_
+
+Note: The mutated versions of these 3' UTRs were created by introducing nucleotides substitutions in the microRNA seed site. This should disrupt microRNA recognition.
