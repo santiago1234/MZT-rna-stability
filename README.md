@@ -4,6 +4,7 @@ This repository contains data and scripts for the analysis found in "**The cross
 
 by *Santiago Gerardo Medina, Gopal Kushawah, María José Blanco Salazar, and Ariel A Bazzini*
 
+[![DOI](https://zenodo.org/badge/164946878.svg)](https://zenodo.org/badge/latestdoi/164946878)
 
 ### Project Organization
 
