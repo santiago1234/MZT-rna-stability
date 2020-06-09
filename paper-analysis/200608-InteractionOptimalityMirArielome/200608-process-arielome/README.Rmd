@@ -1,0 +1,44 @@
+---
+title: "Workflow to process arielome for analysis"
+author: "Santiago Medina"
+date: "6/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(tidyverse)
+dirtoraw <- "../../../data/19-03-23-Arielome/processed_arielome_data/"
+meta <- read_csv("../../../data/19-03-23-Arielome/Arielome/metadata.csv") %>% 
+  filter(condition == "wt")
+
+```
+
+The arielome data is located at: *../../../data/19-03-23-Arielome/processed_arielome_data/*. The files in that directory with termination *\*premature_stop.csv* are the sequences from the library containing a premature stop codon and possibly a 3' UTR sequence. Plese see the *../../../data/19-03-23-Arielome/README.md* for further reference.
+
+
+
+The snakemakw workflow has two steps:
+
+1. `filter_by_seqlen`: Remove short seqs (check the file to check params).
+2. `add_optimality`: Use the predictive model to predict the stability of the sequences. I will use the prediction as an indicator of codon optimality. Here, I also add an indicator variable for the presence of miR-430 6-mer.
+
+I will only process the files at 2hrs and 8hrs without treatment.
+
+```{r}
+knitr::kable(meta)
+```
+
+To run this pipeline use:
+
+```bash
+snakemake --cores 8 data/arielome_opt_mir.csv
+```
+
+The main output of this pipeline is the file `data/arielome_opt_mir.csv`.
+
+```{r echo=FALSE, message=FALSE}
+mout <- read_csv("data/arielome_opt_mir.csv")
+sample_n(mout, 10) %>% 
+  knitr::kable()
+```
+

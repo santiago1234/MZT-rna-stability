@@ -1,21 +1,16 @@
-SAMPLES = ["AG01305", "AG01306", "AG01307", "AG01297", "AG01300", "AG01301"]
-
-
-rule all:
-    input:
-        expand("data/{sample}_optimality_mir.csv", sample=SAMPLES)
+SAMPLES = ["AG01305.1", "AG01306.1", "AG01307.1", "AG01297.1", "AG01300.1", "AG01301.1"]
 
 
 rule filter_by_seqlen:
     input:
-        "../../../data/19-03-23-Arielome/processed_arielome_data/{sample}.1_premature_stop.csv"
+        "../../../data/19-03-23-Arielome/processed_arielome_data/{sample}_premature_stop.csv"
     output:
     	"data/{sample}_seqs.csv"
     message:
         "Filtering short sequences {input}"
     shell:
 	# you need to escape awk character { with {{
-        """awk -F "," 'NR==1{{print;next}} length($2) >= 350 {{print}}' {input} | awk -F "," 'NR==1{{print;next}} length($3) >= 180 {{print}}' > {output}"""
+        """awk -F "," 'NR==1{{print;next}} length($2) >= 350 {{print}}' {input} | awk -F "," 'NR==1{{print;next}} length($3) >= 150 {{print}}' > {output}"""
 
 
 rule add_optimality:
@@ -27,3 +22,14 @@ rule add_optimality:
         "adding optimality and miR-430 presence to arielome seqs"
     script:
         "add-optimality.R"
+
+
+rule gatherarielome:
+    input:
+        ari=expand("data/{sample}_optimality_mir.csv", sample=SAMPLES),
+	metadata="../../../data/19-03-23-Arielome/Arielome/metadata.csv"
+    output:
+        "data/arielome_opt_mir.csv"
+    script:
+    	"gather_arielome.R"
+
