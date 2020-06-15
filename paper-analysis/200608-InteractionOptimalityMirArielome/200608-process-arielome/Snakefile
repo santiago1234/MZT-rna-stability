@@ -6,11 +6,16 @@ rule filter_by_seqlen:
         "../../../data/19-03-23-Arielome/processed_arielome_data/{sample}_premature_stop.csv"
     output:
     	"data/{sample}_seqs.csv"
+    params:
+        minutr_bp=75,
+	min_cds = 350
     message:
-        "Filtering short sequences {input}"
+        "Filtering short sequences {input}. Min 3' UTR = {params.minutr_bp}, cds = {params.min_cds}"
     shell:
 	# you need to escape awk character { with {{
-        """awk -F "," 'NR==1{{print;next}} length($2) >= 350 {{print}}' {input} | awk -F "," 'NR==1{{print;next}} length($3) >= 150 {{print}}' > {output}"""
+	# we assume an specific format of the input table. 3 columns the 1st column is the
+	# gene id, 2nd is cds, and 3rd is the 3' UTR
+        """awk -F "," 'NR==1{{print;next}} length($2) >= {params.min_cds} {{print}}' {input} | awk -F "," 'NR==1{{print;next}} length($3) >= {params.minutr_bp} {{print}}' > {output}"""
 
 
 rule add_optimality:
