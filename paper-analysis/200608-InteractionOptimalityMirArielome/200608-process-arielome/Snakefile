@@ -18,9 +18,20 @@ rule filter_by_seqlen:
         """awk -F "," 'NR==1{{print;next}} length($2) >= {params.min_cds} {{print}}' {input} | awk -F "," 'NR==1{{print;next}} length($3) >= {params.minutr_bp} {{print}}' > {output}"""
 
 
-rule add_optimality:
+rule drop_repeats:
     input:
         "data/{sample}_seqs.csv"
+    output:
+        "data/{sample}_complexified.csv"
+    params:
+    	min_repeat=5
+    script:
+    	"drop_repeats.R"
+
+
+rule add_optimality:
+    input:
+        "data/{sample}_complexified.csv"
     output:
     	"data/{sample}_optimality_mir.csv"
     message:
