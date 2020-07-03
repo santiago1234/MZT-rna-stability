@@ -1,0 +1,39 @@
+FISH_TIME_POINTS = list(range(4, 9))
+XEN_TIME_POINTS = list(range(3, 14))
+
+rule rank_genes:
+    input:
+        # this table contains the residual for different time points
+    	timepoints="../200701-AddTimePoints/results-data/predicted-log2fold-timepoints.csv"
+    output:
+        "results-data/ranked_genes/ranked_{time}hrs_{specie}.txt"
+    log:
+        "logs/01-{specie}-{time}.rds"
+    script:
+        "scripts/01-rank-genes.R"
+
+
+rule run_sylamer:
+    input:
+	# the path the the binary sylamer
+    	sylamer_binary="../../bin/sylamer-12-342/sylamer",
+	utrs="../191012-Fig02SylamerAnalysis/results_data/utrs_{specie}.fa",
+	ranked_genes="results-data/ranked_genes/ranked_{time}hrs_{specie}.txt"
+    output:
+        "results-data/sylamer/syl-{time}hrs_{specie}.tsv"
+    shell: "{input.sylamer_binary} -k 6 -m 4 -grow-times 20 -v 0 -fasta {input.utrs} -universe {input.ranked_genes} -o {output}"
+
+
+rule collapse_results:
+    input:
+        fish=expand("results-data/sylamer/syl-{time}hrs_fish.tsv", time=FISH_TIME_POINTS),
+	xenopus=expand("results-data/sylamer/syl-{time}hrs_xenopus.tsv", time=XEN_TIME_POINTS)
+    output:
+        "results-data/syll_aggregated.csv"
+    script:
+        "scripts/02-aggragate-syl.R"
+
+rule make_plot:
+    input: "results-data/syll_aggregated.csv"
+    output: "figures/syl-by-timepoint.pdf"
+    script: "scripts/03-make-plot.R"
