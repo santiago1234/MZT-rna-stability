@@ -71,6 +71,7 @@ summary_stability <-
 data %>% 
   mutate(optimality = str_c("q", optimality)) %>% 
   ggplot(aes(x=optimality, y=decay_rate, color=optimality)) +
+  geom_hline(yintercept = 1, size = .1, linetype = 2) +
   geom_sina(shape=16, alpha=.99, size=1/4) +
   geom_rangeframe(sides = "l", color="black", size=1/5) +
   geom_errorbar(

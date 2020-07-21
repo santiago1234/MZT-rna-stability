@@ -94,6 +94,7 @@ summary_mir430 <- mir430_data %>%
 
 mir430_data %>% 
   ggplot(aes(x=optimality, y=log2FC, color=optimality)) +
+  geom_hline(yintercept = 0, size = .1, linetype = 2) +
   geom_sina(shape=16, alpha=.99, size=1/4) +
   geom_rangeframe(color="black", size=1/5, sides = "l") +
   geom_errorbar(
@@ -137,6 +138,7 @@ summary_m6a <- m6a_data %>%
 
 m6a_data %>% 
   ggplot(aes(x=optimality, y=log2FC, color=optimality)) +
+  geom_hline(yintercept = 0, size = .1, linetype = 2) +
   geom_sina(shape=16, alpha=.99, size=1/4) +
   geom_rangeframe(color="black", size=1/5, sides = "l") +
   geom_errorbar(
