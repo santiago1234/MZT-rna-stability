@@ -27,7 +27,7 @@ arielome <- inner_join(arielome, arielomeseqs)
 
 # add an indicator variable for the miR-430 -------------------------------
 
-mir430kmer <- "(AGCACT|GCACTT)"
+mir430kmer <- "GCACTT"
 utr <- select(arielome, utr3) %>% 
   unique()
 

@@ -1,9 +1,30 @@
+# these are the samples in zebrafish
 SAMPLES = ["AG01305.1", "AG01306.1", "AG01307.1", "AG01297.1", "AG01300.1", "AG01301.1"]
 
+# samples in xenopues
+SAMPLES_XEN = ['AG01353', 'AG01354', 'AG01358', 'AG01359', 'AG01360', 'AG01361']
 
 rule filter_by_seqlen:
     input:
         "../../../data/19-03-23-Arielome/processed_arielome_data/{sample}_premature_stop.csv"
+    output:
+    	"data/{sample}_seqs.csv"
+    params:
+        minutr_bp=75,
+	min_cds = 350
+    message:
+        "Filtering short sequences {input}. Min 3' UTR = {params.minutr_bp}, cds = {params.min_cds}"
+    shell:
+	# you need to escape awk character { with {{
+	# we assume an specific format of the input table. 3 columns the 1st column is the
+	# gene id, 2nd is cds, and 3rd is the 3' UTR
+        """awk -F "," 'NR==1{{print;next}} length($2) >= {params.min_cds} {{print}}' {input} | awk -F "," 'NR==1{{print;next}} length($3) >= {params.minutr_bp} {{print}}' > {output}"""
+
+
+rule filter_by_seqlen_xenopus:
+    # these rule is the same as above, I only change the path to the xenopus samples
+    input:
+        "../../../data/20-07-23-ArielomeXenopus/processed_arielome_data/{sample}_premature_stop.csv"
     output:
     	"data/{sample}_seqs.csv"
     params:
@@ -43,7 +64,9 @@ rule add_optimality:
 rule gatherarielome:
     input:
         ari=expand("data/{sample}_optimality_mir.csv", sample=SAMPLES),
-	metadata="../../../data/19-03-23-Arielome/Arielome/metadata.csv"
+	ari_xen=expand("data/{sample}_optimality_mir.csv", sample=SAMPLES_XEN),
+	metadata="../../../data/19-03-23-Arielome/Arielome/metadata.csv",
+	metadata_xen="../../../data/20-07-23-ArielomeXenopus/metadata.csv"
     output:
         "data/arielome_opt_mir.csv"
     script:

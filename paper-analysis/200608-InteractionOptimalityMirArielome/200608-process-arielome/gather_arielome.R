@@ -1,18 +1,27 @@
 library(tidyverse)
 
+
 # script parameters
 meta <- snakemake@input$metadata
-infiles <- snakemake@input$ari
+meta_xen <- snakemake@input$metadata_xen
+
+# combine fish and xenopus samples
+infiles <- c(
+  snakemake@input$ari,
+  snakemake@input$ari_xen
+)
 outfile <- snakemake@output[[1]]
   
   
 
-meta <- read_csv(meta)
+meta <- read_csv(meta) %>% mutate(species = "fish")
+meta_xen <- read_csv(meta_xen) %>% mutate(species = "xenopus")
 
+meta <- bind_rows(meta, meta_xen)
 
 loadf <- function(infile) {
   samname <- basename(infile) %>% 
-    str_replace(pattern = "\\.1_optimality_mir\\.csv", replacement = "")
+    str_replace(pattern = "\\.?1?_optimality_mir\\.csv", replacement = "")
   
   read_csv(infile) %>% 
     mutate(sample_name = samname)
