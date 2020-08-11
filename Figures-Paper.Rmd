@@ -1,0 +1,13 @@
+---
+title: "Code to replicate figures in the paper"
+author: "Santiago G. Medina-Muñoz"
+date: "8/11/2020"
+output:
+  github_document: default
+  html: True
+---
+
+
+## Fig. 1
+
+* Fig 1A -> [code](paper-analysis/191005-EvaluateModelLearningCurve/06-plots.R)
