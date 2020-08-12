@@ -58,7 +58,6 @@ la_plot <-
   facet_grid(~specie, scales = "free_x") +
   ggpubr::stat_cor(color = "black", size=3) +
   scale_color_manual(values = colors) +
-  geom_rangeframe(color = "black") +
   coord_cartesian(ylim = c(-5.5, 5.5)) +
   labs(
     color = "optimality quantile\nBazzini et al., 2016",
@@ -69,8 +68,7 @@ la_plot <-
 la_plot +
   geom_point(data = optimality_medians, aes(x=x_, y=y_), color = "black", size=3, shape=16, alpha=.99) +
   geom_point(data = microRNA_medians, aes(x=x_, y=y_), color = "black", size=3, shape=16, alpha=.99) +
-  geom_rug(data = optimality_medians, aes(x=x_, y=y_), color = "black", size=1/3) +
-  geom_rug(data = microRNA_medians, aes(x=x_, y=y_), color = "black", size=1/3)
+  theme(axis.line = element_line(size = 1/3))
 
 
 ggsave("figures/predictions-mzt.pdf", height = 3, width = 7)

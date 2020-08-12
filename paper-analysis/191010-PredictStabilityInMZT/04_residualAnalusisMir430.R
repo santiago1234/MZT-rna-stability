@@ -65,11 +65,16 @@ site_strength %>%
   ) +
   geom_sina(shape=16, size=1/10, alpha=.99) +
   facet_grid(~specie) +
-  geom_rangeframe(color="black", size=1/4) +
   geom_errorbar(data = site_stats, aes(y=mediana, x=var, ymin=mediana, ymax=mediana), color="black", size=1/5) +
-  geom_text(data = site_stats, aes(x=var, y=5, label=paste0("n=", n)), color="grey", size=1) +
+  geom_text(data = site_stats, aes(x=var, y=5, label=paste0("n=", n)), color="grey", size=1.5) +
   scale_color_manual(values = c("grey", "#009E73", "#009E73","#009E73")) +
-  theme(legend.position = "none", axis.text.x = element_text(angle = 30, hjust = 1.5), text = element_text(size=6), axis.ticks = element_line(size=1/5)) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1.5),
+    text = element_text(size=6),
+    axis.ticks = element_line(size=1/5),
+    axis.line = element_line(size = 1/4)
+    ) +
   labs(
     x = "miR-430 k-mer seed",
     y = "residuals (observed - predicted)"
@@ -93,11 +98,16 @@ nsite_strength %>%
   ) +
   geom_sina(shape=16, size=1/10, alpha=.99) +
   facet_grid(~specie) +
-  geom_rangeframe(color="black", size=1/4) +
   geom_errorbar(data = nsite_stats, aes(y=mediana, x=var, ymin=mediana, ymax=mediana), color="black", size=1/5) +
-  geom_text(data = nsite_stats, aes(x=var, y=5, label=paste0("n=", n)), color="grey", size=1) +
+  geom_text(data = nsite_stats, aes(x=var, y=5, label=paste0("n=", n)), color="grey", size=1.5) +
   scale_color_manual(values = c("grey", "#009E73", "#009E73")) +
-  theme(legend.position = "none", text = element_text(size=6), axis.ticks = element_line(size=1/5)) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1.5),
+    text = element_text(size=6),
+    axis.ticks = element_line(size=1/5),
+    axis.line = element_line(size = 1/4)
+  ) +
   labs(
     x = "miR-430 k-mer seed",
     y = "residuals (observed - predicted)"
@@ -127,16 +137,21 @@ resid_median <- mztdatos  %>%
 
 mztdatos %>% 
   ggplot(aes(x=m6A, y=resid, color=m6A)) +
-  geom_rangeframe(color="black", size=1/4) +
   geom_sina(shape=16, alpha=.99, size=1/20) +
   geom_errorbar(data = resid_median, aes(y=mediana_r, x=m6A, ymin=mediana_r, ymax=mediana_r), color="black", size=1/5) +
-  geom_text(data=resid_median, aes(x=m6A, y=4, label=paste0("n=", n)), color="grey", size=1) +
+  geom_text(data=resid_median, aes(x=m6A, y=4, label=paste0("n=", n)), color="grey", size=1.5) +
   labs(
     x = NULL,
     y = "residuals (observed - predicted)"
   ) +
   scale_color_manual(values = c("grey", "#E69F00")) +
-  theme(legend.position = "none")
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1.5),
+    text = element_text(size=6),
+    axis.ticks = element_line(size=1/5),
+    axis.line = element_line(size = 1/4)
+  )
 
 ggsave("figures/residual-m6a.pdf", height = 2, width = 1.5)  
 

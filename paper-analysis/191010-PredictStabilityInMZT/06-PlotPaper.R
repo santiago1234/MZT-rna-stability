@@ -57,8 +57,9 @@ mztdatos %>%
   geom_point(shape=16, size=2/3, alpha=.99) +
   facet_wrap(~specie, scales = "free_x") +
   geom_hline(yintercept = 0, size=1/4) +
-  geom_rangeframe(color="black", size=1/5) +
-  scale_color_manual(values = c("grey70", "#009E73"))
+  geom_rug(size = .1/2) +
+  scale_color_manual(values = c("grey70", "#009E73")) +
+  theme(axis.line = element_line(size = .3))
 
 ggsave("figures/residuals_plot.pdf", height = 3, width = 6)
 
