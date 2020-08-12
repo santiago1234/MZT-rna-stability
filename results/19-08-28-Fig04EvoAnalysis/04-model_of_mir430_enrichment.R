@@ -16,6 +16,7 @@
 library(tidyverse)
 library(ggthemes)
 library(ggforce)
+library(brms)
 
 theme_set(theme_tufte(base_family = "Helvetica"))
 
