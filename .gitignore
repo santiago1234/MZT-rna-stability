@@ -1,3 +1,5 @@
+# the DRIVE I am using create some files, maybe rsync
+._*
 # ignore recent figures
 *.png
 # ignore this folder
