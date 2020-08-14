@@ -82,8 +82,8 @@ p_fc <- convined_datos %>%
   ggpubr::stat_cor(size=2)
   
 
-pdf("figures/05-orthologs-foldchange-optimality.pdf", height = 3.5, width = 3)
-grid.arrange(p_opt, p_fc)
+pdf("figures/05-orthologs-foldchange-optimality.pdf", height = 2, width = 4)
+grid.arrange(p_fc, p_opt, nrow = 1)
 dev.off()
 # make the 4 grps bassed on the presence of miR-430 -----------------------
 
@@ -114,7 +114,7 @@ medianas <- datos_plot %>%
 
 datos_plot %>% 
   ggplot(aes(x=reorder(group, PLS1_fish, mean), y=PLS1_fish, fill=group)) +
-  ggforce::geom_sina(aes(color=group), shape=21, alpha=.99, seed=3, color="black") +
+  ggforce::geom_sina(aes(color=group), shape=21, alpha=.99, seed=3, color="black", size = .5) +
   geom_rangeframe(size=1/4) +
   scale_fill_viridis_d(option = "A") +
   geom_errorbar(data = medianas, aes(ymin=mediana, ymax=mediana, y=mediana, group)) +
@@ -127,7 +127,7 @@ datos_plot %>%
   theme_tufte(base_family = "Helvetica") +
   theme(legend.position = "none")
 
-ggsave("figures/05-analysis-orthologs-conserved-miR430-type.pdf", height = 3.5, width = 4.5)
+ggsave("figures/05-analysis-orthologs-conserved-miR430-type.pdf", height = 2, width = 2.5)
 
 
 # statistics --------------------------------------------------------------
