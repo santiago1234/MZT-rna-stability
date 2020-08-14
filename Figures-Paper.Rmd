@@ -16,7 +16,7 @@ Here, you can find some of the code that was used to generate the figures in the
 * [Figure 1C](paper-analysis/191210-1nucOutOfFrameRepoterGopalData/01-plot.R)
 * [Figure 1D](paper-analysis/191107-PredictReporterPairs/plot.R)
 
-## Figure 2
+## Figure 2 [X]
 
 * [Figure 2B](paper-analysis/191010-PredictStabilityInMZT/03_predictions_mzt.R)
 * [Figure 2C](results/19-07-15-OptimalityStrongestPredictorOfMrnaStability/plot_results.R)
