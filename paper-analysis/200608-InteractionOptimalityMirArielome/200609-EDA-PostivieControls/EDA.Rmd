@@ -1,0 +1,208 @@
+---
+title: "EDA, Positive Controls"
+author: "Santiago Medina"
+date: "6/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, collapse = T,
+  fig.path = "./figures/", dev = c("png", "pdf"),
+  dpi=300,
+  fig.height = 3,
+  fig.width = 5
+  )
+
+library(tidyverse)
+library(ggridges)
+library(gam)
+
+d <- read_csv("../200608-process-arielome/data/arielome_opt_mir.csv")
+
+tmp_mo <- d %>% 
+  filter(species == "fish", condition != "wt")
+
+tmp_wt <- d %>% 
+  filter(species == "fish", time == 2)
+
+d <- bind_rows(tmp_mo, tmp_wt)
+```
+
+## Overview
+
+Some note from an email I send to Ariel:
+
+1. In the sequences that I have filter. Can I see the regulation of codon optimality (The variable I am using as an indicator of optimality)?
+2. Can I see miR-430 regulation in these sequences (6mer, 7mer, and 8mer)? 
+3. What is the complexity of these sequences? If I see a lot of repeats (no complexity) probably I won't see the effect.
+
+If the data passes these controls I will be able to say something.
+
+## EDA
+
+```{r}
+d %>% 
+  count(seq_id) %>% 
+  ggplot(aes(x = n)) +
+  geom_histogram(binwidth = 5) +
+  scale_y_log10() +
+  scale_x_continuous(breaks = seq(from=0, to=1500, by=250)) +
+  labs(
+    x = "sequences is represented n-times"
+  )
+```
+
+We have some sequences that are repeated muiltiple times. I will discard sequences that are repeated more than 30 times.
+
+```{r}
+repeated_more_than_30 <- 
+  d %>% 
+  count(seq_id) %>% 
+  filter(n > 20) %>% 
+  pull(seq_id)
+
+d <- filter(d, !seq_id %in% repeated_more_than_30)
+
+d %>% 
+  count(seq_id) %>% 
+  ggplot(aes(x = n)) +
+  geom_histogram(binwidth = 1) +
+  scale_y_log10() +
+  scale_x_continuous() +
+  labs(
+    x = "sequences is represented n-times",
+    y = "repeats removed"
+  )
+```
+
+### Can we see codon optimality regulation?
+
+First I plot the destribution of optimality scores.
+
+```{r}
+d %>% 
+  ggplot(aes(x = optimality, fill = as.character(time))) +
+  geom_histogram(bins = 100) +
+  facet_wrap(~sample_name) +
+  labs(
+    color = "Time [hrs]",
+    x = "Predicted stability (codon optimality)"
+    )
+```
+
+Observation: Maybe we don't find sequences that are very optimal/non-optimal.
+Why?
+
+$$
+\text{Codon composition arielome } != \text{Codon composition endogenous}
+$$
+
+```{r}
+tmp <- d %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  group_by(time) %>% 
+  summarise(opt = median(optimality))
+
+d %>% 
+  mutate(time = paste0(time, " hrs")) %>% 
+  ggplot(aes(x= optimality, fill = time)) +
+  geom_density(alpha = .5, color = "white") +
+  geom_vline(data = tmp, aes(xintercept = opt, color = time), size = .6) +
+  theme_ridges(grid = FALSE) +
+  scale_fill_brewer(type = "qual") +
+  scale_color_brewer(type = "qual") +
+  labs(
+    title = "Codon optimality regulation is present",
+    subtitle = "p-value < 2e-16"
+  )
+
+```
+
+Compute a p.value
+
+```{r}
+lm(optimality ~ time, data = d) %>% 
+  broom::tidy()
+```
+
+
+
+### Can we see miR-430 effect
+
+```{r}
+fit <- glm(mir430mer6 ~ time , data = d, family=binomial(link='logit'))
+broom::tidy(fit)
+```
+
+Good! We can see miR-430 regulation.
+
+### EDA plots
+
+```{r}
+res <- d %>% 
+  mutate(
+    time = as.factor(time),
+    opt = ntile(optimality, n = 10)
+  ) %>% 
+  group_by(time, opt) %>% 
+  summarise(mir_p = mean(mir430mer6)) %>% 
+  ungroup()
+
+res %>% 
+  ggplot(aes(x = opt, y = mir_p, color = time)) +
+  geom_line() +
+  geom_smooth()
+
+res %>% 
+  pivot_wider(values_from = mir_p, names_from = time) %>% 
+  mutate(
+    log2 = log2((`8` + .000001) / (`2` + .000001))
+  ) %>% 
+  ggplot(aes(x = opt, y = log2)) +
+  geom_line() +
+  geom_smooth()
+```
+Cool! The results agreee, but we need the model.
+
+### Boostrap resamples
+
+```{r main, message=F, fig.height=4, fig.width=5}
+boostrap_sample <- function(i) {
+  sample_frac(d, prop = 1, replace = T) %>% 
+    mutate(
+      time = as.factor(time),
+      opt = ntile(optimality, n = 7)
+    ) %>% 
+    group_by(time, opt) %>% 
+    summarise(mir_p = mean(mir430mer6)) %>% 
+    ungroup() %>% 
+    mutate(boot = i)
+}
+
+
+resultado <- 1:100 %>% 
+  map_df(boostrap_sample)
+
+resultado %>% 
+  pivot_wider(values_from = mir_p, names_from = time) %>% 
+  mutate(
+    log2 = log2((`8` + .000001) / (`2` + .000001))
+  ) %>% 
+  ggplot(aes(x = opt, y = log2)) +
+  geom_hline(yintercept = 0) +
+  geom_boxplot(aes(group = opt, fill = opt), outlier.shape = NA) +
+  scale_x_continuous(breaks = 1:15) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 3.5) +
+  labs(
+    x = "optimality quantiles",
+    y = "log2 fold-change\n depletion miR-430 seed",
+    title = "Arielome data",
+    subtitle = "boostrap resamples"
+  ) +
+  ggridges::theme_ridges() +
+  theme(legend.position = "none")
+
+```
+
+

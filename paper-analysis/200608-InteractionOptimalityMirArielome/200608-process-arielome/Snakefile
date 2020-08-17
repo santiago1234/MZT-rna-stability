@@ -1,5 +1,5 @@
 # these are the samples in zebrafish
-SAMPLES = ["AG01305.1", "AG01306.1", "AG01307.1", "AG01297.1", "AG01300.1", "AG01301.1"]
+SAMPLES = ["AG01305.1", "AG01306.1", "AG01307.1", "AG01297.1", "AG01300.1", "AG01301.1", "AG01302.1", "AG01303.1", "AG01304.1"]
 
 # samples in xenopues
 SAMPLES_XEN = ['AG01353', 'AG01354', 'AG01358', 'AG01359', 'AG01360', 'AG01361']
