@@ -6,7 +6,9 @@ Santiago G. Medina-Muñoz
 Here, you can find some of the code that was used to generate the
 figures in the publication.
 
-## Figure 1 \[X\]
+# Main Figures
+
+## Figure 1
 
   - [Figure
     1A](paper-analysis/191005-EvaluateModelLearningCurve/06-plots.R)
@@ -14,7 +16,7 @@ figures in the publication.
     1C](paper-analysis/191210-1nucOutOfFrameRepoterGopalData/01-plot.R)
   - [Figure 1D](paper-analysis/191107-PredictReporterPairs/plot.R)
 
-## Figure 2 \[X\]
+## Figure 2
 
   - [Figure
     2B](paper-analysis/191010-PredictStabilityInMZT/03_predictions_mzt.R)
@@ -28,7 +30,7 @@ figures in the publication.
   - [Figure
     3E](paper-analysis/191012-Fig02SylamerAnalysis/04_plotM5cAndM6Amotifs.R)
 
-## Figure 4 \[X\]
+## Figure 4
 
   - [Figure 4A-B](results/19-08-19-OverlapFinal/02-mzt_overlap.R)
   - [Figure 4C](results/19-08-19-OverlapFinal/04-mouse_overlap.R)
@@ -39,7 +41,12 @@ figures in the publication.
 
 ## Figure 5
 
-  - \[Figure 5A\]
+  - [Figure
+    5A](paper-analysis/200305-MDIZER_mir430_OPtimality/analysis-DICER-boostrap.R)
+  - [Figure
+    5B](paper-analysis/200513-InteractionOptimalityMir430/02-interaction_fish.R)
+  - [Figure
+    5C](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/02-InteractionBoostrap.R)
 
 ## Figure 6
 
@@ -49,3 +56,5 @@ figures in the publication.
     6B](results/19-08-28-Fig04EvoAnalysis/04-model_of_mir430_enrichment.R)
   - [Figures
     6C-E](results/19-08-28-Fig04EvoAnalysis/conservation-analysis-ortologs.R)
+
+# Supplemental Figures
