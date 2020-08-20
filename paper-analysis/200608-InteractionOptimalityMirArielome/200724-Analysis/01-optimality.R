@@ -97,3 +97,35 @@ d %>%
   unnest(tf) %>% 
   select(-c(data, fit)) %>% 
   write_csv("results-data/stats-mir.csv")
+
+## draw plot
+
+boostra_mir_dep <- function(index)  {
+  d %>% 
+    sample_frac(size = 1, replace = T) %>% 
+    filter(condition == "wt") %>% 
+    group_by(species, time) %>% 
+    count(mir430mer6) %>% 
+    mutate(
+      p = n / sum(n) # this gives the probability of mir in each sample
+    ) %>% 
+    ungroup() %>% 
+    filter(mir430mer6) %>% 
+    select(-mir430mer6, -n) %>% 
+    pivot_wider(names_from = time, values_from = p) %>% 
+    mutate(
+      log2fc = log2(late / early),
+      i = index
+    )
+}
+
+mir_dep_res <- 
+  1:100 %>% 
+  map_df(boostra_mir_dep)
+
+
+mir_dep_res %>% 
+  ggplot(aes(x = species, y = log2fc)) +
+  geom_hline(yintercept = 0) +
+  geom_boxplot(fill = "grey")
+ggsave("figures/02-MirDepletion.pdf", height = 2, width = 1.5)

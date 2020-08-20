@@ -53,3 +53,8 @@ Here, you can find some of the code that was used to generate the figures in the
 
 
 # Supplemental Figures
+
+
+## Supplemental Figure 6
+
+* [Supplemental Figure 6E](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/01-optimality.R)

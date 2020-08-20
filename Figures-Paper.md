@@ -58,3 +58,8 @@ figures in the publication.
     6C-E](results/19-08-28-Fig04EvoAnalysis/conservation-analysis-ortologs.R)
 
 # Supplemental Figures
+
+## Supplemental Figure 6
+
+  - [Supplemental Figure
+    6E](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/01-optimality.R)
