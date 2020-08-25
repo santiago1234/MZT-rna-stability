@@ -128,7 +128,7 @@ summary_expression <-
 dtaplot %>% 
   mutate(optimality = str_c("q", optimality)) %>%
   ggplot(aes(x=optimality, y=expression_level, color=optimality)) +
-  geom_hline(yintercept = 10**(1.5), size = .1, linetype = 2) +
+  geom_hline(yintercept = 10**(1.5), size = .2, color = 'grey') +
   geom_sina(shape=16, alpha=.99, size=1/10) +
   geom_rangeframe(sides = "l", color="black", size=1/5) +
   geom_errorbar(

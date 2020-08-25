@@ -46,6 +46,7 @@ d_xen %>%
   geom_point(shape = 16, size = .5, alpha = .9) +
   geom_smooth(method = "lm", se = F, color = "blue",alpha = .5, size = .5) +
   geom_hline(data = mean_log2fc, aes(yintercept = mlf), linetype = 2, size = .4) +
+  ggpubr::stat_cor(size = 1.5, color = "black") +
   scale_color_manual(values = c("grey", '#04591A')) +
   facet_grid(time~miR430) +
   coord_cartesian(ylim = c(-7, 6)) +

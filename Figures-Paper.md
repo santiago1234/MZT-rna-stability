@@ -62,4 +62,13 @@ figures in the publication.
 ## Supplemental Figure 6
 
   - [Supplemental Figure
-    6E](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/01-optimality.R)
+    S6A](paper-analysis/200701-AddTimePoints/03-MirOptimalityAdditive.R)
+  - [Supplemental Figure
+    S6B](results/19-08-19-OverlapFinal/02-mzt-mir430-MA-genes.R)
+  - [Supplemental Figure
+    S6C](results/19-08-19-OverlapFinal/05-plotMajoExperimentalResults.R)
+
+## Supplemental Figure 7
+
+  - [Supplemental Figure
+    7E](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/01-optimality.R)
