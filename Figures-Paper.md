@@ -59,6 +59,19 @@ figures in the publication.
 
 # Supplemental Figures
 
+## Supplemental Figure 5
+
+  - [Supplemental Figure
+    S5A](paper-analysis/191010-PredictStabilityInMZT/06-PlotPaper.R)
+  - [Supplemental Figure
+    S5B](paper-analysis/191012-Fig02SylamerAnalysis/05_elements_supplemental.R)
+  - [Supplemental Figure
+    S5C](paper-analysis/191012-Fig02SylamerAnalysis/05_elements_supplemental.R)
+  - [Supplemental Figure
+    S5D](paper-analysis/200702-SylamerAddTimePoints/scripts/03-make-plot.R)
+  - [Supplemental Figure
+    S5E](paper-analysis/200705-SylamerInCodingStopcodonAnd3utr/04-m6a-sites.R)
+
 ## Supplemental Figure 6
 
   - [Supplemental Figure

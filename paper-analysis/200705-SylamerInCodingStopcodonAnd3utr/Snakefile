@@ -1,0 +1,56 @@
+SEQTYPE = ['coding', 'stopcodon', '3utr']
+
+rule all:
+    input:
+        "figures/syl-coding-stop-utr.pdf",
+	"figures/m6a-sites.pdf"
+
+
+rule get_seqs:
+    input:
+	# this table contains the sequences for the genes i am using
+        seqs="../191010-PredictStabilityInMZT/results-data/mzt_predictionsResidualsLog2Fc.csv"
+    output:
+        "results-data/seqs/{species}-{seqtype}.fa"
+    script: "01-getseqs.R"
+
+
+rule run_sylamer:
+    input:
+	# the path the the binary sylamer
+    	sylamer_binary="../../bin/sylamer-12-342/sylamer",
+	utrs="results-data/seqs/{species}-{seqtype}.fa",
+	# check the folder ../200702-SylamerAddTimePointsresults-data
+	# to understand the file
+	ranked_genes="../200702-SylamerAddTimePoints/results-data/ranked_genes/ranked_{time}hrs_{species}.txt"
+    output:
+        temp("results-data/sylamer/syl-{time}hrs_{species}_{seqtype}.tsv")
+    shell: "{input.sylamer_binary} -k 6 -m 4 -grow-times 20 -v 0 -fasta {input.utrs} -universe {input.ranked_genes} -o {output}"
+
+
+rule collapse_results:
+    input:
+	# I use 6 hrs for fish and 9 hrs for xenopus as in the paper
+        fish=expand("results-data/sylamer/syl-6hrs_fish_{seqtype}.tsv", seqtype=SEQTYPE),
+	xenopus=expand("results-data/sylamer/syl-9hrs_xenopus_{seqtype}.tsv", seqtype=SEQTYPE)
+    output:
+        "results-data/syll_aggregated.csv"
+    script:
+        "02-aggragate-syl.R"
+
+rule make_plot:
+    input: "results-data/syll_aggregated.csv"
+    output:
+        plot="figures/syl-coding-stop-utr.pdf"
+    script: "03-make-plot.R"
+
+
+rule plot_msixA_sites:
+    input:
+        "../191010-PredictStabilityInMZT/results-data/mzt_predictionsResidualsLog2Fc.csv"
+    output:
+        plot="figures/m6a-sites.pdf",
+	stats="results-data/m6a-sites-stats.csv"
+    script:
+        "04-m6a-sites.R"
+
