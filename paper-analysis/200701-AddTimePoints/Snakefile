@@ -1,0 +1,23 @@
+rule add_foldchange_predictions:
+    input:
+	# model predicted stability
+    	model_predicted_stability = "../191010-PredictStabilityInMZT/results-data/predicted_stabilit_fish_and_xenopus_all_genes.csv",
+	# precomputed log2foldchange over 3 hrs zebra-fish
+	foldchange_data_fish = "../../data/19-02-05-FoldChangeData/data/log2FC_earlyVSlate_tidytimecourse.csv",
+	# gene expression time course
+	expression_profile_xenopus = "../../data/19-06-12-XenopusData/time_course_xenopus.csv",
+	# the genes in this table are used in the paper
+	gene_list = "../191010-PredictStabilityInMZT/results-data/mzt_predictionsResidualsLog2Fc.csv"
+    output:
+    	"results-data/predicted-log2fold-timepoints.csv"
+    script:
+        "01-PrefictFoldChanges.R"
+
+
+rule plot_prediction_time_points:
+    input:
+        "results-data/predicted-log2fold-timepoints.csv"
+    output:
+        "figures/prediction-by-timepoint.pdf"
+    script:
+        "02-PredictionsOverTime.R"
