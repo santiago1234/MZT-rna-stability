@@ -59,10 +59,19 @@ figures in the publication.
 
 # Supplemental Figures
 
-## Supplemental Figure 5
+## Supplemental Figure 3
 
   - [Supplemental Figure
-    5B-D](results/19-09-03-Sup3_PLSanalysis/pls_data_viz.R)
+    3A-B](paper-analysis/191005-EvaluateModelLearningCurve/02-PlotLearningCurve.R)
+  - [Supplemental Figure
+    3C](paper-analysis/191005-EvaluateModelLearningCurve/06-plots.R)
+  - [Supplemental Figure
+    3D](paper-analysis/200701-AddTimePoints/02-PredictionsOverTime.R)
+
+## Supplemental Figure 4
+
+  - [Supplemental Figure
+    4B-D](results/19-09-03-Sup3_PLSanalysis/pls_data_viz.R)
 
 ## Supplemental Figure 5
 
