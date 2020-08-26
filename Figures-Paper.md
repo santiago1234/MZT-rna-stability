@@ -59,6 +59,13 @@ figures in the publication.
 
 # Supplemental Figures
 
+## Supplemental Figure 1
+
+  - [Supplemental Figure
+    1B-D](results/19-01-10-EDA-RNA-time-course/01-EDA-time-course.Rmd)
+  - [Supplemental Figure
+    1E-F](results/19-01-11-GetDecayRateFromTimeCourse/plot_examples_paper.R)
+
 ## Supplemental Figure 2
 
   - [Supplemental Figure

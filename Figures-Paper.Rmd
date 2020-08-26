@@ -54,6 +54,11 @@ Here, you can find some of the code that was used to generate the figures in the
 
 # Supplemental Figures
 
+## Supplemental Figure 1
+
+* [Supplemental Figure 1B-D](results/19-01-10-EDA-RNA-time-course/01-EDA-time-course.Rmd)
+* [Supplemental Figure 1E-F](results/19-01-11-GetDecayRateFromTimeCourse/plot_examples_paper.R)
+
 ## Supplemental Figure 2
 
 * [Supplemental Figure 2B](paper-analysis/200715-EvaluationPositionPrediction/03-models.R)
