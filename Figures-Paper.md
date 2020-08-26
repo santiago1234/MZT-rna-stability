@@ -62,6 +62,11 @@ figures in the publication.
 ## Supplemental Figure 5
 
   - [Supplemental Figure
+    5B-D](results/19-09-03-Sup3_PLSanalysis/pls_data_viz.R)
+
+## Supplemental Figure 5
+
+  - [Supplemental Figure
     S5A](paper-analysis/191010-PredictStabilityInMZT/06-PlotPaper.R)
   - [Supplemental Figure
     S5B](paper-analysis/191012-Fig02SylamerAnalysis/05_elements_supplemental.R)

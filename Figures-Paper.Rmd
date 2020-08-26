@@ -54,6 +54,11 @@ Here, you can find some of the code that was used to generate the figures in the
 
 # Supplemental Figures
 
+
+## Supplemental Figure 5
+
+* [Supplemental Figure 5B-D](results/19-09-03-Sup3_PLSanalysis/pls_data_viz.R)
+
 ## Supplemental Figure 5
 
 * [Supplemental Figure S5A](paper-analysis/191010-PredictStabilityInMZT/06-PlotPaper.R)
