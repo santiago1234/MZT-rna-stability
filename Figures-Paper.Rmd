@@ -54,6 +54,10 @@ Here, you can find some of the code that was used to generate the figures in the
 
 # Supplemental Figures
 
+## Supplemental Figure 2
+
+* [Supplemental Figure 2B](paper-analysis/200715-EvaluationPositionPrediction/03-models.R)
+
 ## Supplemental Figure 3
 
 * [Supplemental Figure 3A-B](paper-analysis/191005-EvaluateModelLearningCurve/02-PlotLearningCurve.R)

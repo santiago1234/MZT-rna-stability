@@ -59,6 +59,11 @@ figures in the publication.
 
 # Supplemental Figures
 
+## Supplemental Figure 2
+
+  - [Supplemental Figure
+    2B](paper-analysis/200715-EvaluationPositionPrediction/03-models.R)
+
 ## Supplemental Figure 3
 
   - [Supplemental Figure
