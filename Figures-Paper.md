@@ -46,7 +46,7 @@ figures in the publication.
   - [Figure
     5B](paper-analysis/200513-InteractionOptimalityMir430/02-interaction_fish.R)
   - [Figure
-    5C](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/02-InteractionBoostrap.R)
+    5D](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/02-InteractionBoostrap.R)
 
 ## Figure 6
 
@@ -110,4 +110,14 @@ figures in the publication.
 ## Supplemental Figure 7
 
   - [Supplemental Figure
-    7E](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/01-optimality.R)
+    7A](paper-analysis/200513-InteractionOptimalityMir430/03-interaction_xen.R)
+  - [Supplemental Figure
+    7C-E](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/01-optimality.R)
+  - [Supplemental Figure
+    7F](paper-analysis/200608-InteractionOptimalityMirArielome/200724-Analysis/02-InteractionBoostrap.R)
+  - [Supplemental Figure
+    7G](results/19-08-19-OverlapFinal/05-plotFoldChangeReporters.R)
+
+# R computational environment
+
+The following R environment was used to generate the figures.
