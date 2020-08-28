@@ -5,9 +5,8 @@ author: Santiago Gerardo Medina, Gopal Kushawah, María José Blanco Salazar, Ar
   A Bazzini
 date: "5/26/2020"
 output:
+  word_document: default
   github_document: default
-  html_document:
-    df_print: paged
 ---
 
 # Published data
@@ -30,7 +29,8 @@ RNA-seq gene level quantifications.
 Raw sequencing data have been deposited in NCBI Gene Expression Omnibus  [GSE148391](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE148391).
 This table contains 35,117 rows and 31 columns. Each row represents a gene.
 
-Columns description:
+The column names contains all the relevant sample description:
+
 
   + **Gene_ID ->** zebrafish ensembl gene id
   + **Treatment_x-y_hrs-RNAseq_z** Here each column represents a single RNA-seq experiment containing the gene expression levels (Transcripts Per Million). The variables x, y, and z are placed holders:
@@ -229,7 +229,7 @@ Columns description:
   + etc.
 
 
-```{r table6}
+```{r table6, cache=TRUE}
 ## add codon counts
 secuencias <- bind_rows(optimalcodonR::training, optimalcodonR::testing)
 
@@ -259,7 +259,7 @@ write_csv(secuencias, 'table6.csv')
 
 ## Reporters sequences
 
-Below you can find the coding and 3' UTR sequences that were used to clone the reporter genes used in **Fig. 4e** and **Figure S4e**.
+Below you can find the coding and 3' UTR sequences that were used to clone the reporter genes used in **Fig. 4e** and **Figure S5e**.
 
 #### Coding
 

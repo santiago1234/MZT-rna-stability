@@ -19,7 +19,7 @@ deposited in NCBI Gene Expression Omnibus
 This table contains 35,117 rows and 31 columns. Each row represents a
 gene.
 
-Columns description:
+The column names contains all the relevant sample description:
 
   - **Gene\_ID -\>** zebrafish ensembl gene id
   - **Treatment\_x-y\_hrs-RNAseq\_z** Here each column represents a
