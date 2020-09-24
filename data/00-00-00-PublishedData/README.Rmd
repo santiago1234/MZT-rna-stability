@@ -1,8 +1,7 @@
 ---
 title: The crosstalk between codon optimality and 3' UTR cis-elements dictates mRNA
   stability
-author: Santiago Gerardo Medina, Gopal Kushawah, María José Blanco Salazar, Ariel
-  A Bazzini
+author: Santiago Gerardo Medina-Muñoz, Gopal Kushawah, Luciana Andrea Castellano, Michay Diez, Michelle Lynn DeVore, María José Blanco Salazar, Ariel A Bazzini
 date: "5/26/2020"
 output:
   word_document: default
@@ -18,7 +17,7 @@ library(optimalcodonR)
 set.seed(42)
 ```
 
-A short description of the generated data accompanying this publication.
+A short description of each dataset accompanying this publication.
 
 ***
 
@@ -34,7 +33,7 @@ The column names contains all the relevant sample description:
 
   + **Gene_ID ->** zebrafish ensembl gene id
   + **Treatment_x-y_hrs-RNAseq_z** Here each column represents a single RNA-seq experiment containing the gene expression levels (Transcripts Per Million). The variables x, y, and z are placed holders:
-    `x`: Some embryos were treated with [alpha-amanitin](https://en.wikipedia.org/wiki/Alpha-Amanitin) to inhibit zygotic transcription. This takes only two values: `aamanitin` which denotes alpha-amanitin treated embryos and `wt` which represents untreated embryos.
+    `x`: Some embryos were treated with alpha-amanitin to inhibit zygotic transcription. This takes only two values: `aamanitin` which denotes alpha-amanitin treated embryos and `wt` which represents untreated embryos.
     `y`: time post fertilization (hours).
     `z`: RNA-seq method `ribo` for ribosomal-RNA depletion and `polya` for poly-A selection.
 
@@ -192,6 +191,8 @@ resid %>%
 write_csv(resid, 'table4.csv')
 ```
 
+***
+
 ## **Table 5**: Gene level mesurements of codon optimality.
 
 See the methods section “Measuring codon optimality at the gene level” and Additional file Figure S3. This table contains numerical measurements of codon optimality in some endogenous genes, we have generated two such measurements PLS1 and PLS2, positive values are associated with enrichment in optimal codons (stabilizing codon) and negative values with enrichment in non-optimal codons (destabilizing codon).
@@ -215,7 +216,31 @@ optimality %>%
 write_csv(optimality, 'table5.csv')
 ```
 
-## **Table 6**: Codon frequencies of endogenous genes used to train machine learning model
+***
+
+## **Table 6**: Reporter sequences
+
+This table contains 4 rows and 2 columns (Fig. 4e).
+
+Columns description:
+
+  + **sequence_id ->**: The sequence id.
+  + **PLS1 ->** The reporter DNA sequence.
+
+
+Next, you can find the first column of this table.
+
+```{r table6}
+read_csv("table6.csv") %>% 
+  select(sequence_id) %>% 
+  knitr::kable(caption = 'Table 6')
+```
+
+
+
+***
+
+## **Table 7**: Codon frequencies of endogenous genes used to train machine learning model
 
 This table contains the codon frequencies of the endogenous genes for zebrafish, *Xenopus*, mouse, and human. The frequencies were determined from the longest coding sequence isoform for each transcript.
 
@@ -229,7 +254,7 @@ Columns description:
   + etc.
 
 
-```{r table6, cache=TRUE}
+```{r table7, cache=TRUE}
 ## add codon counts
 secuencias <- bind_rows(optimalcodonR::training, optimalcodonR::testing)
 
@@ -250,61 +275,8 @@ secuencias <-
 secuencias %>% 
   sample_n(5) %>% 
   select(1:5) %>% 
-  knitr::kable(caption = 'Table 6')
+  knitr::kable(caption = 'Table 7')
 
-write_csv(secuencias, 'table6.csv')
+write_csv(secuencias, 'table7.csv')
 ```
 
-***
-
-## Reporters sequences
-
-Below you can find the coding and 3' UTR sequences that were used to clone the reporter genes used in **Fig. 4e** and **Figure S5e**.
-
-#### Coding
-
-**Optimal sequence:**
-GACATCTTTGGCTTTGAGAACTTTGAGGTCAACCGCTTTGAGCAGTTCAACATTAACTATGCAAAC
-GAGAAGCTTCAGGAGTATTTCAACAAGCACATTTTCTCACTGGAGCAGCTTGAGTTCAGGAAGGTGCAGCATGAGCTGGAGGAGG
-CTCAGGAGAGAGCTGACATCGCCGAGTCCCAGGTCAACAAGCTCAGAGCTAAAAGCCGTGAATTTGGAAAGGGTAAAGAGGCTGA
-GGAGGCTGACTCCTTCGACTATAAGAGCTTCTTCGCCAAGGTTGGGCTGTCCGCCAAGACTCCTGATGACATCAAGAAGGCTTTT
-GCTGTCATTGACCAGGACAAGAGCGGCTTCATTGAGGAGGATGTGGAGGACTCCCTCTGTGAGGCCAAAGAGCTGTTCATCAAGA
-CAGTCAAGCACTTCGGTGAGGACGCTGATAAGATGCAGCCTGATGAGTTCTTTGGGATTTTCGACCAGTTCTTGCGTATCCCCAA
-GGAGCAGGGCTTCCTGTCGTTCTGGAGAGGAAACTTGGCCAACGTCATCAGATACTTCCCCACACAGGCCCTCAACTTTGCTTTC
-AAGGACAAGTACAAGAAGGTCTTCGACATCACAGACAAGCTGGAGAACGAGCTGGCCAATAAGGAGGCTTTCCTCAGACAGATGG
-AGGAGAAGAACAGGCAGTTGCAGGAGCGGCTTGAGTTGGCAGAGCAGAAGCTCCAGCAG
-
-**Non-optimal sequence:**
-ACATCTTTGGCTTTGAGAACTTTGAGGTCAACCGCTTTGAGCAGTTCAACATTAACTATGCAAACGAGAAGCTTCAGGAGTATTT
-CAACAAGCACATTTTCTCACTGGAGCAGCTTGAGTTCAGGAAGGTGCAGCATGAGCTGGAGGAGGCTCAGGAGAGAGCTGACATC
-GCCGAGTCCCAGGTCAACAAGCTCAGAGCTAAAAGCCGTGAATTTGGAAAGGGTAAAGAGGCTGAGGAGGCTGACTCCTTCGACT
-ATAAGAGCTTCTTCGCCAAGGTTGGGCTGTCCGCCAAGACTCCTGATGACATCAAGAAGGCTTTTGCTGTCATTGACCAGGACAA
-GAGCGGCTTCATTGAGGAGGATGTGGAGGACTCCCTCTGTGAGGCCAAAGAGCTGTTCATCAAGACAGTCAAGCACTTCGGTGAG
-GACGCTGATAAGATGCAGCCTGATGAGTTCTTTGGGATTTTCGACCAGTTCTTGCGTATCCCCAAGGAGCAGGGCTTCCTGTCGT
-TCTGGAGAGGAAACTTGGCCAACGTCATCAGATACTTCCCCACACAGGCCCTCAACTTTGCTTTCAAGGACAAGTACAAGAAGGT
-CTTCGACATCACAGACAAGCTGGAGAACGAGCTGGCCAATAAGGAGGCTTTCCTCAGACAGATGGAGGAGAAGAACAGGCAGTTG
-CAGGAGCGGCTTGAGTTGGCAGAGCAGAAGCTCCAGCAGG
-
-#### 3' UTRs
-
-3' UTR weak seeds. This UTR was used in **Figure S4e**. This UTR contains a 6-mer and a 7-mer:
-
-CTTCCACCAATAGAGGAACTAGGAAACAACCAATGGGCTCTGATAAATCAGAGGAAAGGTGAAGAGAAAAAAAACCTGTGCTGCC
-ACAATACCCCGAGAGTGCATGGAATAGTTACACATTAAACAACTGTGAAGAAGAGAGACACAGTTAGAACAAATACAGTATCCAA
-AAC**GCACTT**CTTACATTC**AGCACTT**GCAGTTTTCGTTTTACTTCATTATTTTGAAATAATAACAGTAGACACA
-ACTT
-CAGCCATATGCGCTTACTTTGCAcCCAATAATCCGTTTTCATAAAGAACGACTTACATTTTATGTTTTAATAACTTGTTAATTGT
-ATTATGGGAACAGATTATATGGTCTGTTATTAATGGCTCTTACTAATAAATGTGTCAATTGAATTATTGGCTGTTTTT
-
-
-3' UTR strong seeds. This UTR was used in **Fig. 4e**. This UTR contains two 7-mers and an 8-mer:
-
-TGATCCAACGTGGAGTTCTCGCATCTTGAAATGTCCAAATATATTATCATTATTATTTTCCCTCTTCATTTGCTCTTCAACGAAA
-GGTGAACAGGTGGAACGATATTTATTTTTCTAGTCTGTAATTTTCTGCTGAAAGTATTTTTTTGTGTGTATGTTAAAACAAATGT
-GGAGAGGTTTCAAAGACCAAACGATTGGCTGACGAAGACGAATATCTTCCTAATAATCGATGAATGAAACTATAAATCAGGTGAA
-AATGAACTGGCGGAGTTTCGAGATGAGTTATG**AGCACTT**CTGAGGGTGTTACCAGCGTGAAATGAAGCCAGTGCAGCCC
-AGCTGTCTTAAGTCCCACACAAAAACT**GCACTTA**ACTG**AGCACTTA**AAAAGAAAAACATATTTGACCACAACA
-GTCGAAGCAGTTTCCAAAATTTAGGAAAGACTTTTAATTTATTTTTCAGTATTCTGCTAACTTAAAAGGCCATCATGTGTTGTGT
-GTATGTGACATGTGCCATTACCTCTGCTGTGGCACCTTTTCCTTCTCAGGTAAAATCTGCTTATATTTGTACTT
-
-Note: The mutated versions of these 3' UTRs were created by introducing nucleotides substitutions in the microRNA seed site. This should disrupt microRNA recognition. In the 3' UTR of **Fig. 4e** only the last two microRNA seed were mutated.
