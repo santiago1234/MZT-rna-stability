@@ -1,13 +1,14 @@
 The crosstalk between codon optimality and 3’ UTR cis-elements dictates
 mRNA stability
 ================
-Santiago Gerardo Medina, Gopal Kushawah, María José Blanco Salazar,
-Ariel A Bazzini
+Santiago Gerardo Medina-Muñoz, Gopal Kushawah, Luciana Andrea
+Castellano, Michay Diez, Michelle Lynn DeVore, María José Blanco
+Salazar, Ariel A Bazzini
 5/26/2020
 
 # Published data
 
-A short description of the generated data accompanying this publication.
+A short description of each dataset accompanying this publication.
 
 -----
 
@@ -25,8 +26,7 @@ The column names contains all the relevant sample description:
   - **Treatment\_x-y\_hrs-RNAseq\_z** Here each column represents a
     single RNA-seq experiment containing the gene expression levels
     (Transcripts Per Million). The variables x, y, and z are placed
-    holders: `x`: Some embryos were treated with
-    [alpha-amanitin](https://en.wikipedia.org/wiki/Alpha-Amanitin) to
+    holders: `x`: Some embryos were treated with alpha-amanitin to
     inhibit zygotic transcription. This takes only two values:
     `aamanitin` which denotes alpha-amanitin treated embryos and `wt`
     which represents untreated embryos. `y`: time post fertilization
@@ -37,11 +37,11 @@ A few rows and columns of the table are shown below:
 
 | Gene\_ID           | Treatment\_wt-0\_hrs-RNAseq\_ribo | Treatment\_wt-1\_hrs-RNAseq\_ribo |
 | :----------------- | --------------------------------: | --------------------------------: |
-| ENSDARG00000000001 |                             12.02 |                             12.47 |
-| ENSDARG00000000068 |                             52.57 |                             48.97 |
-| ENSDARG00000000069 |                            219.59 |                            163.14 |
-| ENSDARG00000000019 |                             49.06 |                             39.72 |
 | ENSDARG00000000002 |                              2.71 |                              2.20 |
+| ENSDARG00000000001 |                             12.02 |                             12.47 |
+| ENSDARG00000000019 |                             49.06 |                             39.72 |
+| ENSDARG00000000018 |                            105.91 |                             87.21 |
+| ENSDARG00000000069 |                            219.59 |                            163.14 |
 
 Table 1
 
@@ -141,13 +141,13 @@ publications:
 
 A few rows of the table are shown below excluding the `coding` column:
 
-| gene\_id           | specie | cell\_type | datatype   | decay\_rate | utrlenlog | cdslenlog | allocation |
-| :----------------- | :----- | :--------- | :--------- | ----------: | --------: | --------: | :--------- |
-| ENSG00000013523    | human  | RPE        | endogenous |   0.2978391 |  8.023225 |  7.607878 | training   |
-| ENSG00000131943    | human  | k562       | slam-seq   | \-0.8748520 |  8.249837 |  6.131227 | training   |
-| ENSG00000104325    | human  | 293t       | endogenous | \-0.1878186 |  7.459915 |  6.916715 | training   |
-| ENSG00000227124    | human  | k562       | endogenous |   0.0023865 |  6.916715 |  7.917901 | training   |
-| ENSMUSG00000018865 | mouse  | mES cells  | slam-seq   |   0.6431109 |  7.225481 |  6.752270 | training   |
+| gene\_id           | specie | cell\_type | datatype        | decay\_rate | utrlenlog | cdslenlog | allocation |
+| :----------------- | :----- | :--------- | :-------------- | ----------: | --------: | --------: | :--------- |
+| ENSG00000149428    | human  | 293t       | endogenous      |   0.9591786 |  7.705713 |  8.007700 | training   |
+| ENSG00000183826    | human  | 293t       | endogenous      | \-0.2203851 |  8.784928 |  7.517521 | training   |
+| ENSDARG00000007181 | fish   | embryo mzt | aamanitin ribo  |   0.6516244 |  5.236442 |  7.165494 | training   |
+| ENSDARG00000025820 | fish   | embryo mzt | aamanitin ribo  | \-2.1045739 |  5.056246 |  7.321850 | training   |
+| ENSDARG00000017244 | fish   | embryo mzt | aamanitin polya |   1.5186344 |  8.373323 |  9.088625 | training   |
 
 Table 3
 
@@ -173,13 +173,15 @@ A few rows of the table are shown below:
 
 | gene\_id           | specie  |   predicted |    residual |
 | :----------------- | :------ | ----------: | ----------: |
-| ENSDARG00000006031 | fish    |   0.2479914 | \-0.0736010 |
-| ENSXETG00000013410 | xenopus |   0.3176923 | \-1.2910357 |
-| ENSDARG00000070447 | fish    | \-0.0268868 | \-0.0312370 |
-| ENSXETG00000024933 | xenopus | \-0.3469115 |   1.4982524 |
-| ENSXETG00000020045 | xenopus | \-0.6369484 |   0.6133757 |
+| ENSXETG00000017158 | xenopus |   0.0736592 |   0.4100507 |
+| ENSDARG00000041113 | fish    | \-0.0636230 |   0.6425244 |
+| ENSXETG00000019722 | xenopus | \-0.6945703 | \-0.0959954 |
+| ENSXETG00000020444 | xenopus |   0.4641538 |   0.7438621 |
+| ENSXETG00000013779 | xenopus |   0.1119481 | \-2.0316289 |
 
 Table 4
+
+-----
 
 ## **Table 5**: Gene level mesurements of codon optimality.
 
@@ -200,17 +202,41 @@ Columns description:
   - **PLS2 -\>** measurement 2 of codon optimality
   - **specie -\>** vertebrate (human, mouse, xenopus, or zebrafish).
 
-| gene\_id           |        PLS1 |        PLS2 | specie  |
-| :----------------- | ----------: | ----------: | :------ |
-| ENSXETG00000027421 |   3.5829424 | \-1.9113006 | xenopus |
-| ENSMUSG00000031731 | \-1.0684200 |   2.9623095 | mouse   |
-| ENSMUSG00000022000 | \-2.3651121 |   0.9490589 | mouse   |
-| ENSG00000197647    | \-6.3191219 | \-5.4298493 | human   |
-| ENSMUSG00000030538 |   0.4288678 | \-3.3887081 | mouse   |
+| gene\_id           |        PLS1 |        PLS2 | specie |
+| :----------------- | ----------: | ----------: | :----- |
+| ENSDARG00000099464 |   0.7106535 | \-2.4052864 | fish   |
+| ENSG00000181396    |   2.6401594 | \-1.4055193 | human  |
+| ENSG00000123576    |   0.6598256 | \-1.5668842 | human  |
+| ENSMUSG00000040034 | \-3.7472500 |   2.0859899 | mouse  |
+| ENSDARG00000101190 | \-1.1129394 |   0.7257975 | fish   |
 
 Table 5
 
-## **Table 6**: Codon frequencies of endogenous genes used to train machine learning model
+-----
+
+## **Table 6**: Reporter sequences
+
+This table contains 4 rows and 2 columns (Fig. 4e).
+
+Columns description:
+
+  - **sequence\_id -\>**: The sequence id.
+  - **PLS1 -\>** The reporter DNA sequence.
+
+Next, you can find the first column of this table.
+
+| sequence\_id        |
+| :------------------ |
+| CODING-optimal      |
+| CODING-non\_optimal |
+| 3UTR-mir17          |
+| 3UTR-mir17\_mutant  |
+
+Table 6
+
+-----
+
+## **Table 7**: Codon frequencies of endogenous genes used to train machine learning model
 
 This table contains the codon frequencies of the endogenous genes for
 zebrafish, *Xenopus*, mouse, and human. The frequencies were determined
@@ -228,69 +254,10 @@ Columns description:
 
 | gene\_id           | AAA | AAC | AAG | AAT |
 | :----------------- | --: | --: | --: | --: |
-| ENSG00000175084    |   1 |  17 |  21 |   3 |
-| ENSMUSG00000005506 |   8 |  16 |  19 |  14 |
-| ENSMUSG00000053654 |   1 |  12 |  16 |   7 |
-| ENSG00000128928    |   3 |   7 |  21 |  13 |
-| ENSDARG00000025889 |  20 |   7 |  22 |   8 |
+| ENSDARG00000079869 |   5 |   7 |  12 |   3 |
+| ENSG00000179604    |   1 |   0 |  17 |   5 |
+| ENSG00000169813    |   6 |   8 |  10 |   3 |
+| ENSG00000167700    |   1 |   1 |   7 |   2 |
+| ENSG00000083454    |   7 |  16 |  22 |   4 |
 
-Table 6
-
------
-
-## Reporters sequences
-
-Below you can find the coding and 3’ UTR sequences that were used to
-clone the reporter genes used in **Fig. 4e** and **Figure S4e**.
-
-#### Coding
-
-**Optimal sequence:**
-GACATCTTTGGCTTTGAGAACTTTGAGGTCAACCGCTTTGAGCAGTTCAACATTAACTATGCAAAC
-GAGAAGCTTCAGGAGTATTTCAACAAGCACATTTTCTCACTGGAGCAGCTTGAGTTCAGGAAGGTGCAGCATGAGCTGGAGGAGG
-CTCAGGAGAGAGCTGACATCGCCGAGTCCCAGGTCAACAAGCTCAGAGCTAAAAGCCGTGAATTTGGAAAGGGTAAAGAGGCTGA
-GGAGGCTGACTCCTTCGACTATAAGAGCTTCTTCGCCAAGGTTGGGCTGTCCGCCAAGACTCCTGATGACATCAAGAAGGCTTTT
-GCTGTCATTGACCAGGACAAGAGCGGCTTCATTGAGGAGGATGTGGAGGACTCCCTCTGTGAGGCCAAAGAGCTGTTCATCAAGA
-CAGTCAAGCACTTCGGTGAGGACGCTGATAAGATGCAGCCTGATGAGTTCTTTGGGATTTTCGACCAGTTCTTGCGTATCCCCAA
-GGAGCAGGGCTTCCTGTCGTTCTGGAGAGGAAACTTGGCCAACGTCATCAGATACTTCCCCACACAGGCCCTCAACTTTGCTTTC
-AAGGACAAGTACAAGAAGGTCTTCGACATCACAGACAAGCTGGAGAACGAGCTGGCCAATAAGGAGGCTTTCCTCAGACAGATGG
-AGGAGAAGAACAGGCAGTTGCAGGAGCGGCTTGAGTTGGCAGAGCAGAAGCTCCAGCAG
-
-**Non-optimal sequence:**
-ACATCTTTGGCTTTGAGAACTTTGAGGTCAACCGCTTTGAGCAGTTCAACATTAACTATGCAAACGAGAAGCTTCAGGAGTATTT
-CAACAAGCACATTTTCTCACTGGAGCAGCTTGAGTTCAGGAAGGTGCAGCATGAGCTGGAGGAGGCTCAGGAGAGAGCTGACATC
-GCCGAGTCCCAGGTCAACAAGCTCAGAGCTAAAAGCCGTGAATTTGGAAAGGGTAAAGAGGCTGAGGAGGCTGACTCCTTCGACT
-ATAAGAGCTTCTTCGCCAAGGTTGGGCTGTCCGCCAAGACTCCTGATGACATCAAGAAGGCTTTTGCTGTCATTGACCAGGACAA
-GAGCGGCTTCATTGAGGAGGATGTGGAGGACTCCCTCTGTGAGGCCAAAGAGCTGTTCATCAAGACAGTCAAGCACTTCGGTGAG
-GACGCTGATAAGATGCAGCCTGATGAGTTCTTTGGGATTTTCGACCAGTTCTTGCGTATCCCCAAGGAGCAGGGCTTCCTGTCGT
-TCTGGAGAGGAAACTTGGCCAACGTCATCAGATACTTCCCCACACAGGCCCTCAACTTTGCTTTCAAGGACAAGTACAAGAAGGT
-CTTCGACATCACAGACAAGCTGGAGAACGAGCTGGCCAATAAGGAGGCTTTCCTCAGACAGATGGAGGAGAAGAACAGGCAGTTG
-CAGGAGCGGCTTGAGTTGGCAGAGCAGAAGCTCCAGCAGG
-
-#### 3’ UTRs
-
-3’ UTR weak seeds. This UTR was used in **Figure S4e**. This UTR
-contains a 6-mer and a 7-mer:
-
-CTTCCACCAATAGAGGAACTAGGAAACAACCAATGGGCTCTGATAAATCAGAGGAAAGGTGAAGAGAAAAAAAACCTGTGCTGCC
-ACAATACCCCGAGAGTGCATGGAATAGTTACACATTAAACAACTGTGAAGAAGAGAGACACAGTTAGAACAAATACAGTATCCAA
-AAC**GCACTT**CTTACATTC**AGCACTT**GCAGTTTTCGTTTTACTTCATTATTTTGAAATAATAACAGTAGACACA
-ACTT
-CAGCCATATGCGCTTACTTTGCAcCCAATAATCCGTTTTCATAAAGAACGACTTACATTTTATGTTTTAATAACTTGTTAATTGT
-ATTATGGGAACAGATTATATGGTCTGTTATTAATGGCTCTTACTAATAAATGTGTCAATTGAATTATTGGCTGTTTTT
-
-3’ UTR strong seeds. This UTR was used in **Fig. 4e**. This UTR contains
-two 7-mers and an 8-mer:
-
-TGATCCAACGTGGAGTTCTCGCATCTTGAAATGTCCAAATATATTATCATTATTATTTTCCCTCTTCATTTGCTCTTCAACGAAA
-GGTGAACAGGTGGAACGATATTTATTTTTCTAGTCTGTAATTTTCTGCTGAAAGTATTTTTTTGTGTGTATGTTAAAACAAATGT
-GGAGAGGTTTCAAAGACCAAACGATTGGCTGACGAAGACGAATATCTTCCTAATAATCGATGAATGAAACTATAAATCAGGTGAA
-AATGAACTGGCGGAGTTTCGAGATGAGTTATG**AGCACTT**CTGAGGGTGTTACCAGCGTGAAATGAAGCCAGTGCAGCCC
-AGCTGTCTTAAGTCCCACACAAAAACT**GCACTTA**ACTG**AGCACTTA**AAAAGAAAAACATATTTGACCACAACA
-GTCGAAGCAGTTTCCAAAATTTAGGAAAGACTTTTAATTTATTTTTCAGTATTCTGCTAACTTAAAAGGCCATCATGTGTTGTGT
-GTATGTGACATGTGCCATTACCTCTGCTGTGGCACCTTTTCCTTCTCAGGTAAAATCTGCTTATATTTGTACTT
-
-Note: The mutated versions of these 3’ UTRs were created by introducing
-nucleotides substitutions in the microRNA seed site. This should disrupt
-microRNA recognition. In the 3’ UTR of **Fig. 4e** only the last two
-microRNA seed were mutated.
+Table 7

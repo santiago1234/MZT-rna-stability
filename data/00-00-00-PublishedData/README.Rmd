@@ -4,8 +4,8 @@ title: The crosstalk between codon optimality and 3' UTR cis-elements dictates m
 author: Santiago Gerardo Medina-Muñoz, Gopal Kushawah, Luciana Andrea Castellano, Michay Diez, Michelle Lynn DeVore, María José Blanco Salazar, Ariel A Bazzini
 date: "5/26/2020"
 output:
-  word_document: default
   github_document: default
+  word_document: default
 ---
 
 # Published data
