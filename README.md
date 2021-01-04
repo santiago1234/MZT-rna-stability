@@ -4,7 +4,7 @@ This repository contains data and scripts for the analysis found in "**Crosstalk
 
 by *Santiago Gerardo Medina-Muñoz, Gopal Kushawah, Luciana Andrea Castellano, Michay Diez, Michelle Lynn DeVore, María José Blanco Salazar, Ariel A Bazzini*
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4313561.svg)](https://doi.org/10.5281/zenodo.4313561)
+[![DOI](https://zenodo.org/badge/164946878.svg)](https://zenodo.org/badge/latestdoi/164946878)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
