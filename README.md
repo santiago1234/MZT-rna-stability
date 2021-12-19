@@ -8,7 +8,7 @@ by *Santiago Gerardo Medina-Muñoz, Gopal Kushawah, Luciana Andrea Castellano, M
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
-### UPDATE (Dec-2021): Want to predict mRNA stability for any gene using the coding sequence? Check [iCodon](https://github.com/santiago1234/iCodon).
+### UPDATE (Dec-2021): Want to predict mRNA stability for any gene using the coding sequence? Check [iCodon](https://github.com/santiago1234/iCodon).
 
 ### Abstract
 
