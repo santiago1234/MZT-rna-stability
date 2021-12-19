@@ -8,6 +8,8 @@ by *Santiago Gerardo Medina-Muñoz, Gopal Kushawah, Luciana Andrea Castellano, M
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
+### UPDATE (Dec-2021): Want to predict mRNA stability for any gene using the coding sequence? Check [iCodon](https://github.com/santiago1234/iCodon).
+
 ### Abstract
 
 **Background:** The regulation of messenger RNA (mRNA) stability has a profound impact on gene expression dynamics during embryogenesis. For example, in animals, maternally deposited mRNAs are degraded after fertilization to enable new developmental trajectories. Regulatory sequences in 3′ untranslated regions (3′UTRs) have long been considered the central determinants of mRNA stability. However, recent work indicates that the coding sequence also possesses regulatory information. Specifically, translation in cis impacts mRNA stability in a codon-dependent manner. However, the strength of this mechanism during embryogenesis, as well as its relationship with other known regulatory elements, such as microRNA, remains unclear.
